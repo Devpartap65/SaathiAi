@@ -257,39 +257,53 @@ function setStatus(message){
   document.getElementById("status").textContent=message;
 }
 
-function speak(message){
-  if(!("speechSynthesis" in window)) return;
+async function speak(message) {
+  if (!message) return;
 
-  window.speechSynthesis.cancel();
+  try {
+    setStatus("SAATHI AI is preparing your voice...");
 
-  const voices=window.speechSynthesis.getVoices();
-  const languageCode={
-    pa:"pa-IN",
-    hi:"hi-IN",
-    en:"en-IN"
-  }[selectedLanguage];
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action: "speak",
+        text: message,
+        language: selectedLanguage
+      })
+    });
 
-  const matchingVoice=voices.find(v=>
-    v.lang.toLowerCase()===languageCode.toLowerCase()
-  );
+    const data = await response.json();
 
-  // Never substitute Hindi voice for Punjabi.
-  if(!matchingVoice){
-    setStatus(
-      selectedLanguage==="pa"
-      ?"ਪੰਜਾਬੀ ਆਵਾਜ਼ ਇਸ ਬ੍ਰਾਊਜ਼ਰ ਵਿੱਚ ਉਪਲਬਧ ਨਹੀਂ ਹੈ।"
-      :selectedLanguage==="hi"
-      ?"इस ब्राउज़र में हिन्दी आवाज़ उपलब्ध नहीं है।"
-      :"No matching English voice is available."
+    if (!response.ok || !data.audio) {
+      throw new Error(data.error || "Voice generation failed.");
+    }
+
+    const audioBytes = Uint8Array.from(
+      atob(data.audio),
+      c => c.charCodeAt(0)
     );
-    return;
-  }
 
-  const utterance=new SpeechSynthesisUtterance(message);
-  utterance.voice=matchingVoice;
-  utterance.lang=languageCode;
-  utterance.rate=0.88;
-  window.speechSynthesis.speak(utterance);
+    const audioBlob = new Blob(
+      [audioBytes],
+      { type: data.mimeType || "audio/wav" }
+    );
+
+    const audioURL = URL.createObjectURL(audioBlob);
+    const player = new Audio(audioURL);
+
+    player.onended = () => URL.revokeObjectURL(audioURL);
+
+    await player.play();
+
+    setStatus("SAATHI AI is speaking...");
+
+  } catch (error) {
+    console.error("Voice error:", error);
+    setStatus("Voice error: " + error.message);
+  }
 }
 
 async function askSAATHI(question){
