@@ -17,14 +17,8 @@ body {
   min-height: 100vh;
 }
 
-button, input, select, textarea {
-  font: inherit;
-}
-
-button {
-  cursor: pointer;
-  border: none;
-}
+button, input, select, textarea { font: inherit; }
+button { cursor: pointer; border: none; }
 
 .screen {
   display: none;
@@ -108,7 +102,6 @@ h1 { font-size: 29px; }
 .permission-card li { margin: 10px 0; }
 
 /* MAIN COMPANION SCREEN */
-
 #home {
   position: relative;
   overflow: hidden;
@@ -203,6 +196,7 @@ h1 { font-size: 29px; }
   color: #55736a;
   min-height: 25px;
   max-width: 90%;
+  white-space: pre-wrap;
 }
 
 .plus-button {
@@ -219,7 +213,6 @@ h1 { font-size: 29px; }
 }
 
 /* SETTINGS WINDOW */
-
 .modal {
   display: none;
   position: fixed;
@@ -306,7 +299,6 @@ h1 { font-size: 29px; }
   <div class="tagline">Your Voice. Your Companion.</div>
   <h1>Choose your language</h1>
   <p class="subtitle">Please select the language you feel most comfortable speaking.</p>
-
   <button class="choice" onclick="chooseLanguage('pa')">ਪੰਜਾਬੀ · Punjabi</button>
   <button class="choice" onclick="chooseLanguage('hi')">हिन्दी · Hindi</button>
   <button class="choice" onclick="chooseLanguage('en')">English</button>
@@ -317,7 +309,6 @@ h1 { font-size: 29px; }
   <div class="logo">SAATHI AI</div>
   <h1 id="genderHeading">Choose your companion</h1>
   <p class="subtitle" id="genderSubtitle">Select the companion you would like to talk to.</p>
-
   <button class="choice" onclick="chooseGender('male')" id="maleChoice">👴 Male Companion</button>
   <button class="choice" onclick="chooseGender('female')" id="femaleChoice">👵 Female Companion</button>
 </section>
@@ -326,7 +317,6 @@ h1 { font-size: 29px; }
 <section id="introScreen" class="screen">
   <div class="logo">SAATHI AI</div>
   <h1 id="introHeading">Welcome to SAATHI AI</h1>
-
   <div class="permission-card">
     <p id="introText">
       SAATHI AI is here to talk with you, help with reminders and make it easier to contact your family.
@@ -339,7 +329,6 @@ h1 { font-size: 29px; }
     </ul>
     <p>Your permissions are requested only when you use the relevant feature.</p>
   </div>
-
   <button class="primary" id="startButton" onclick="startCompanion()">Continue</button>
 </section>
 
@@ -354,7 +343,6 @@ h1 { font-size: 29px; }
   </div>
 
   <h1 class="greeting" id="greeting"></h1>
-
   <div class="character-area">
     <div class="character-fallback" id="characterFallback">👴</div>
     <img id="characterImage" alt="Your SAATHI AI companion">
@@ -409,6 +397,7 @@ h1 { font-size: 29px; }
 <script>
 let selectedLanguage = "";
 let selectedGender = "";
+
 let contacts = JSON.parse(localStorage.getItem("saathiContacts") || "[]");
 let medicines = JSON.parse(localStorage.getItem("saathiMedicines") || "[]");
 
@@ -440,6 +429,7 @@ const translations = {
     snooze: "10 ਮਿੰਟ ਬਾਅਦ ਯਾਦ ਕਰਾਓ",
     confirmCall: "ਕੀ ਤੁਸੀਂ ਇਸ ਨੰਬਰ 'ਤੇ ਕਾਲ ਕਰਨਾ ਚਾਹੁੰਦੇ ਹੋ?"
   },
+
   hi: {
     greeting: "और बताइए, कैसे हैं आप?",
     mic: "बातें करें",
@@ -467,6 +457,7 @@ const translations = {
     snooze: "10 मिनट बाद याद दिलाएँ",
     confirmCall: "क्या आप इस नंबर पर कॉल करना चाहते हैं?"
   },
+
   en: {
     greeting: "So, how are you?",
     mic: "Let's Talk",
@@ -505,7 +496,6 @@ function chooseLanguage(language) {
   selectedLanguage = language;
   showScreen("genderScreen");
 
-  const t = translations[language];
   document.getElementById("maleChoice").textContent =
     language === "pa" ? "ਮਰਦ ਸਾਥੀ" :
     language === "hi" ? "पुरुष साथी" : "Male Companion";
@@ -526,7 +516,6 @@ function chooseLanguage(language) {
 
 function chooseGender(gender) {
   selectedGender = gender;
-  const t = translations[selectedLanguage];
 
   document.getElementById("introHeading").textContent =
     selectedLanguage === "pa" ? "SAATHI AI ਵਿੱਚ ਜੀ ਆਇਆਂ ਨੂੰ" :
@@ -549,10 +538,10 @@ function startCompanion() {
   document.getElementById("greeting").textContent = t.greeting;
   document.getElementById("micLabel").textContent = t.mic;
   document.getElementById("statusText").textContent = t.status;
+
   document.getElementById("profileLabel").textContent =
     selectedGender === "male" ? t.male : t.female;
 
-  // Six separate character image filenames.
   const imageFiles = {
     "pa-male": "assets/punjabi-male.png",
     "pa-female": "assets/punjabi-female.png",
@@ -590,6 +579,7 @@ function startCompanion() {
 
 function applySettingsLanguage() {
   const t = translations[selectedLanguage];
+
   document.getElementById("settingsTitle").textContent = t.settings;
   document.getElementById("settingsDescription").textContent = t.description;
   document.getElementById("contactHeading").textContent = t.contacts;
@@ -649,6 +639,7 @@ function renderContacts() {
     const remove = document.createElement("button");
     remove.className = "small-button";
     remove.textContent = "Delete";
+
     remove.onclick = () => {
       contacts.splice(index, 1);
       localStorage.setItem("saathiContacts", JSON.stringify(contacts));
@@ -706,6 +697,7 @@ function renderMedicines() {
     const remove = document.createElement("button");
     remove.className = "small-button";
     remove.textContent = "Delete";
+
     remove.onclick = () => {
       medicines.splice(index, 1);
       localStorage.setItem("saathiMedicines", JSON.stringify(medicines));
@@ -716,7 +708,6 @@ function renderMedicines() {
     box.appendChild(item);
   });
 }
-
 
 /* SAATHI AI — REAL AI VOICE CONNECTION */
 
@@ -779,7 +770,7 @@ function startListening() {
       }
 
       status.textContent = data.answer;
-      speak(data.answer);
+      await speak(data.answer);
 
     } catch (error) {
       console.error("SAATHI AI error:", error);
@@ -812,23 +803,89 @@ function startListening() {
   }
 }
 
-/* SPEAK AI ANSWERS */
+/* GEMINI TEXT-TO-SPEECH */
 
-function speak(message) {
-  if (!("speechSynthesis" in window)) return;
+async function speak(message) {
+  const status = document.getElementById("statusText");
 
-  speechSynthesis.cancel();
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action: "speak",
+        text: message,
+        language: selectedLanguage
+      })
+    });
 
-  const utterance = new SpeechSynthesisUtterance(message);
+    const data = await response.json();
 
-  utterance.lang =
-    selectedLanguage === "pa" ? "pa-IN" :
-    selectedLanguage === "hi" ? "hi-IN" : "en-IN";
+    if (!response.ok || !data.audio) {
+      throw new Error(data.details || data.error || "Speech generation failed.");
+    }
 
-  utterance.rate = 0.85;
-  utterance.pitch = 1;
+    const binary = atob(data.audio);
+    const bytes = new Uint8Array(binary.length);
 
-  speechSynthesis.speak(utterance);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+
+    const mimeType = data.mimeType || "audio/pcm;rate=24000";
+    let audioBlob;
+
+    if (mimeType.includes("wav")) {
+      audioBlob = new Blob([bytes], { type: "audio/wav" });
+    } else {
+      // Gemini PCM audio: 24 kHz, 16-bit, mono
+      const wavHeader = new ArrayBuffer(44);
+      const view = new DataView(wavHeader);
+
+      function writeText(offset, value) {
+        for (let i = 0; i < value.length; i++) {
+          view.setUint8(offset + i, value.charCodeAt(i));
+        }
+      }
+
+      writeText(0, "RIFF");
+      view.setUint32(4, 36 + bytes.length, true);
+      writeText(8, "WAVE");
+      writeText(12, "fmt ");
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true);
+      view.setUint16(22, 1, true);
+      view.setUint32(24, 24000, true);
+      view.setUint32(28, 48000, true);
+      view.setUint16(32, 2, true);
+      view.setUint16(34, 16, true);
+      writeText(36, "data");
+      view.setUint32(40, bytes.length, true);
+
+      audioBlob = new Blob(
+        [wavHeader, bytes],
+        { type: "audio/wav" }
+      );
+    }
+
+    const audioUrl = URL.createObjectURL(audioBlob);
+    const audio = new Audio(audioUrl);
+
+    audio.onended = () => URL.revokeObjectURL(audioUrl);
+    audio.onerror = () => URL.revokeObjectURL(audioUrl);
+
+    await audio.play();
+
+  } catch (error) {
+    console.error("SAATHI speech error:", error);
+
+    if (status) {
+      status.textContent +=
+        "\n\nPunjabi voice is temporarily unavailable. Please try again.";
+    }
+  }
 }
 
 /* MEDICINE REMINDERS */
@@ -892,4 +949,3 @@ setInterval(checkReminders, 15000);
 
 </body>
 </html>
-
