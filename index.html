@@ -717,84 +717,141 @@ function renderMedicines() {
   });
 }
 
-/* Voice input: browser speech recognition.
-   This prototype gives a simple spoken response.
-   A secure AI backend is needed for real AI answers. */
+
+/* SAATHI AI — REAL AI VOICE CONNECTION */
+
+const API_URL = "https://holy-bread-723.hortiflora80.workers.dev/";
 
 function startListening() {
   const SpeechRecognition =
     window.SpeechRecognition || window.webkitSpeechRecognition;
 
+  const mic = document.getElementById("micButton");
+  const status = document.getElementById("statusText");
+  const t = translations[selectedLanguage];
+
   if (!SpeechRecognition) {
-    document.getElementById("statusText").textContent =
-      translations[selectedLanguage].unavailable;
+    status.textContent = t.unavailable;
     return;
   }
 
   const recognition = new SpeechRecognition();
+
   recognition.lang =
     selectedLanguage === "pa" ? "pa-IN" :
     selectedLanguage === "hi" ? "hi-IN" : "en-IN";
 
   recognition.interimResults = false;
   recognition.maxAlternatives = 1;
-
-  const mic = document.getElementById("micButton");
-  const status = document.getElementById("statusText");
+  recognition.continuous = false;
 
   recognition.onstart = () => {
     mic.classList.add("listening");
-    status.textContent = translations[selectedLanguage].listening;
+    status.textContent = t.listening;
   };
 
-  recognition.onresult = event => {
-    const spokenText = event.results[0][0].transcript;
-    status.textContent = translations[selectedLanguage].heard + spokenText;
+  recognition.onresult = async (event) => {
+    const spokenText = event.results[0][0].transcript.trim();
 
-    const reply = translations[selectedLanguage].reply;
-    speak(reply);
+    if (!spokenText) {
+      status.textContent = "Please try speaking again.";
+      return;
+    }
+
+    status.textContent = t.heard + spokenText + "\n\nSAATHI is thinking...";
+
+    try {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          question: spokenText,
+          language: selectedLanguage
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok || !data.answer) {
+        throw new Error(data.error || "AI request failed.");
+      }
+
+      status.textContent = data.answer;
+      speak(data.answer);
+
+    } catch (error) {
+      console.error("SAATHI AI error:", error);
+
+      status.textContent =
+        selectedLanguage === "pa"
+          ? "ਮਾਫ਼ ਕਰਨਾ, ਇਸ ਸਮੇਂ ਜਵਾਬ ਨਹੀਂ ਮਿਲ ਸਕਿਆ। ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।"
+          : selectedLanguage === "hi"
+          ? "माफ़ कीजिए, अभी जवाब नहीं मिल सका। कृपया दोबारा कोशिश करें।"
+          : "Sorry, I couldn't get an answer right now. Please try again.";
+    }
   };
 
-  recognition.onerror = () => {
-    status.textContent = translations[selectedLanguage].unavailable;
+  recognition.onerror = (event) => {
+    status.textContent =
+      event.error === "not-allowed"
+        ? "Please allow microphone access."
+        : t.unavailable;
   };
 
-  recognition.onend = () => mic.classList.remove("listening");
+  recognition.onend = () => {
+    mic.classList.remove("listening");
+  };
 
-  recognition.start();
+  try {
+    recognition.start();
+  } catch (error) {
+    mic.classList.remove("listening");
+    status.textContent = "Please wait a moment and try again.";
+  }
 }
+
+/* SPEAK AI ANSWERS */
 
 function speak(message) {
   if (!("speechSynthesis" in window)) return;
 
+  speechSynthesis.cancel();
+
   const utterance = new SpeechSynthesisUtterance(message);
+
   utterance.lang =
     selectedLanguage === "pa" ? "pa-IN" :
     selectedLanguage === "hi" ? "hi-IN" : "en-IN";
 
   utterance.rate = 0.85;
+  utterance.pitch = 1;
+
   speechSynthesis.speak(utterance);
 }
 
-/* Reminder checking while this page remains open.
-   Browser notifications require permission and may not work
-   after the page is closed. */
+/* MEDICINE REMINDERS */
 
 if ("Notification" in window) {
-  // Permission is requested only when the user first saves a reminder.
+  // Permission is requested when a reminder is saved.
 }
 
 let remindedToday = {};
 
 async function requestReminderPermission() {
-  if ("Notification" in window && Notification.permission === "default") {
+  if ("Notification" in window &&
+      Notification.permission === "default") {
     try {
       await Notification.requestPermission();
-    } catch (error) {}
+    } catch (error) {
+      console.log("Notification permission unavailable.");
+    }
   }
 }
 
 const originalSaveMedicine = saveMedicine;
+
 saveMedicine = async function() {
   await requestReminderPermission();
   originalSaveMedicine();
@@ -802,6 +859,7 @@ saveMedicine = async function() {
 
 function checkReminders() {
   const now = new Date();
+
   const currentTime =
     String(now.getHours()).padStart(2, "0") + ":" +
     String(now.getMinutes()).padStart(2, "0");
@@ -816,8 +874,11 @@ function checkReminders() {
 
       const message = "Medicine reminder: " + medicine.name;
 
-      if ("Notification" in window && Notification.permission === "granted") {
-        new Notification("SAATHI AI", { body: message });
+      if ("Notification" in window &&
+          Notification.permission === "granted") {
+        new Notification("SAATHI AI", {
+          body: message
+        });
       } else {
         alert(message);
       }
@@ -826,7 +887,9 @@ function checkReminders() {
 }
 
 setInterval(checkReminders, 15000);
+
 </script>
 
 </body>
 </html>
+
