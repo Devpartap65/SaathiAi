@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,945 +7,511 @@
 <title>SAATHI AI - Your Voice. Your Companion.</title>
 
 <style>
-* { box-sizing: border-box; }
-
-body {
-  margin: 0;
-  font-family: Arial, sans-serif;
-  background: linear-gradient(135deg, #e5f7ee, #f5f0df);
-  color: #123b32;
-  min-height: 100vh;
+*{box-sizing:border-box}
+body{
+  margin:0;font-family:Arial,sans-serif;
+  background:linear-gradient(135deg,#e9f3ff,#f8edff);
+  color:#24334b;min-height:100vh;
+  display:flex;justify-content:center;align-items:center;
+  padding:18px
 }
-
-button, input, select, textarea { font: inherit; }
-button { cursor: pointer; border: none; }
-
-.screen {
-  display: none;
-  min-height: 100vh;
-  padding: 25px 18px;
-  text-align: center;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
+.app{
+  width:100%;max-width:520px;background:white;
+  border-radius:28px;padding:28px 22px;
+  box-shadow:0 12px 45px #25385820;text-align:center
 }
-
-.screen.active { display: flex; }
-
-.logo {
-  font-size: 34px;
-  font-weight: 800;
-  color: #087b54;
-  margin-bottom: 5px;
+h1{color:#345b91;margin:5px 0;font-size:32px}
+h2{font-size:23px}
+p{line-height:1.6;color:#56647a}
+button,input,select{
+  font:inherit;border-radius:14px;padding:14px;
+  border:1px solid #d6deea;width:100%;margin:7px 0
 }
-
-.tagline {
-  font-size: 15px;
-  color: #54736a;
-  margin-bottom: 28px;
+button{
+  background:#426fae;color:white;border:0;
+  font-weight:bold;cursor:pointer
 }
-
-h1 { font-size: 29px; }
-
-.subtitle {
-  color: #55736a;
-  margin-bottom: 25px;
-  line-height: 1.5;
+button:disabled{opacity:.5}
+.option{background:#edf3fc;color:#345b91}
+.screen{display:none}
+.screen.active{display:block}
+.avatar{font-size:115px;margin:15px 0}
+.mic{
+  width:145px;height:145px;border-radius:50%;
+  font-size:48px;background:#426fae;
+  box-shadow:0 8px 25px #426fae45
 }
-
-.choice {
-  width: min(340px, 92vw);
-  padding: 19px;
-  margin: 9px;
-  border-radius: 17px;
-  background: white;
-  color: #14533f;
-  font-size: 20px;
-  font-weight: bold;
-  box-shadow: 0 4px 15px #164d3218;
-  border: 2px solid transparent;
+.plus{
+  width:58px;height:58px;border-radius:50%;
+  font-size:30px;background:#e8effa;color:#345b91;
+  margin-top:20px
 }
-
-.choice:hover {
-  border-color: #079b69;
-  transform: translateY(-2px);
+#answer{
+  background:#f2f6fc;padding:17px;border-radius:18px;
+  min-height:55px;text-align:left;white-space:pre-wrap;
+  margin-top:18px
 }
-
-.primary {
-  background: #07885c;
-  color: white;
-  padding: 15px 30px;
-  border-radius: 30px;
-  font-size: 18px;
-  font-weight: bold;
-  margin-top: 18px;
+.small{font-size:13px}
+.item{
+  background:#f2f6fc;border-radius:14px;
+  padding:12px;margin:9px 0;text-align:left
 }
-
-.secondary {
-  background: #e8f4ed;
-  color: #087b54;
-  padding: 12px 22px;
-  border-radius: 25px;
-  margin-top: 12px;
-}
-
-.permission-card {
-  max-width: 460px;
-  background: white;
-  padding: 22px;
-  border-radius: 20px;
-  text-align: left;
-  line-height: 1.6;
-  box-shadow: 0 5px 20px #164d3215;
-}
-
-.permission-card li { margin: 10px 0; }
-
-/* MAIN COMPANION SCREEN */
-#home {
-  position: relative;
-  overflow: hidden;
-  padding: 18px;
-}
-
-.topbar {
-  width: 100%;
-  max-width: 850px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.topbar .logo {
-  font-size: 25px;
-  margin: 0;
-}
-
-.language-label {
-  background: white;
-  border-radius: 25px;
-  padding: 10px 15px;
-  font-size: 14px;
-  box-shadow: 0 3px 12px #00000010;
-}
-
-.greeting {
-  font-size: clamp(25px, 5vw, 38px);
-  margin: 22px 0 12px;
-  color: #143d32;
-}
-
-.character-area {
-  width: min(440px, 90vw);
-  height: min(48vh, 440px);
-  min-height: 260px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  position: relative;
-}
-
-.character-area img {
-  display: none;
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  object-position: center bottom;
-}
-
-.character-fallback {
-  width: 230px;
-  height: 260px;
-  border-radius: 48% 48% 30% 30%;
-  background: linear-gradient(145deg, #d9eee2, #a8d7bd);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 105px;
-  box-shadow: 0 12px 35px #164d3220;
-}
-
-.mic-button {
-  width: 115px;
-  height: 115px;
-  border-radius: 50%;
-  background: linear-gradient(145deg, #10b878, #006d49);
-  color: white;
-  font-size: 48px;
-  box-shadow: 0 0 0 8px #bcebd4, 0 8px 25px #087b5440;
-  margin-top: 8px;
-}
-
-.mic-button.listening {
-  animation: pulse 1s infinite;
-  background: #d54a42;
-}
-
-@keyframes pulse {
-  50% { transform: scale(1.09); }
-}
-
-.mic-label {
-  font-size: 21px;
-  font-weight: bold;
-  margin-top: 18px;
-}
-
-.status {
-  margin-top: 15px;
-  color: #55736a;
-  min-height: 25px;
-  max-width: 90%;
-  white-space: pre-wrap;
-}
-
-.plus-button {
-  position: fixed;
-  right: 24px;
-  bottom: 25px;
-  width: 66px;
-  height: 66px;
-  border-radius: 50%;
-  background: #07885c;
-  color: white;
-  font-size: 42px;
-  box-shadow: 0 5px 18px #087b5440;
-}
-
-/* SETTINGS WINDOW */
-.modal {
-  display: none;
-  position: fixed;
-  inset: 0;
-  z-index: 10;
-  background: #102b22a8;
-  justify-content: center;
-  align-items: center;
-  padding: 15px;
-}
-
-.modal.open { display: flex; }
-
-.modal-content {
-  width: min(480px, 100%);
-  max-height: 90vh;
-  overflow-y: auto;
-  background: white;
-  border-radius: 22px;
-  padding: 22px;
-  text-align: left;
-}
-
-.modal-content h2 { margin-top: 0; }
-
-.modal-content input,
-.modal-content select,
-.modal-content textarea {
-  width: 100%;
-  padding: 13px;
-  border: 1px solid #c9ddd2;
-  border-radius: 10px;
-  margin: 7px 0 13px;
-  background: white;
-}
-
-.modal-content label {
-  font-weight: bold;
-  font-size: 14px;
-}
-
-.setting-section {
-  padding: 14px 0;
-  border-top: 1px solid #e5eee8;
-}
-
-.saved-item {
-  background: #edf7f0;
-  padding: 12px;
-  border-radius: 10px;
-  margin: 8px 0;
-  overflow-wrap: anywhere;
-}
-
-.small-button {
-  padding: 7px 12px;
-  border-radius: 18px;
-  background: #d9eee2;
-  color: #14533f;
-  margin: 5px;
-}
-
-.close-button {
-  float: right;
-  background: transparent;
-  color: #123b32;
-  font-size: 26px;
-}
-
-@media(max-height: 650px) {
-  .character-area { height: 35vh; min-height: 190px; }
-  .character-fallback { height: 190px; width: 180px; }
-  .greeting { margin: 12px 0; }
-  .mic-button { width: 90px; height: 90px; font-size: 38px; }
-}
+.item button{width:auto;padding:8px 12px}
+.back{background:#e8effa;color:#345b91}
+.status{font-size:14px;min-height:22px;color:#426fae}
 </style>
 </head>
 
 <body>
+<div class="app">
 
-<!-- LANGUAGE SELECTION -->
-<section id="languageScreen" class="screen active">
-  <div class="logo">SAATHI AI</div>
-  <div class="tagline">Your Voice. Your Companion.</div>
-  <h1>Choose your language</h1>
-  <p class="subtitle">Please select the language you feel most comfortable speaking.</p>
-  <button class="choice" onclick="chooseLanguage('pa')">ਪੰਜਾਬੀ · Punjabi</button>
-  <button class="choice" onclick="chooseLanguage('hi')">हिन्दी · Hindi</button>
-  <button class="choice" onclick="chooseLanguage('en')">English</button>
-</section>
+  <div id="languageScreen" class="screen active">
+    <h1>SAATHI AI</h1>
+    <p>Your Voice. Your Companion.</p>
+    <h2>Choose your language</h2>
+    <button onclick="chooseLanguage('pa')">ਪੰਜਾਬੀ</button>
+    <button onclick="chooseLanguage('hi')">हिन्दी</button>
+    <button onclick="chooseLanguage('en')">English</button>
+  </div>
 
-<!-- GENDER SELECTION -->
-<section id="genderScreen" class="screen">
-  <div class="logo">SAATHI AI</div>
-  <h1 id="genderHeading">Choose your companion</h1>
-  <p class="subtitle" id="genderSubtitle">Select the companion you would like to talk to.</p>
-  <button class="choice" onclick="chooseGender('male')" id="maleChoice">👴 Male Companion</button>
-  <button class="choice" onclick="chooseGender('female')" id="femaleChoice">👵 Female Companion</button>
-</section>
+  <div id="genderScreen" class="screen">
+    <h1 id="genderTitle">Choose your companion</h1>
+    <button class="option" onclick="chooseGender('male')">👴 Male</button>
+    <button class="option" onclick="chooseGender('female')">👵 Female</button>
+  </div>
 
-<!-- INTRODUCTION AND PERMISSIONS -->
-<section id="introScreen" class="screen">
-  <div class="logo">SAATHI AI</div>
-  <h1 id="introHeading">Welcome to SAATHI AI</h1>
-  <div class="permission-card">
+  <div id="introScreen" class="screen">
+    <h1 id="introTitle">Welcome to SAATHI AI</h1>
     <p id="introText">
-      SAATHI AI is here to talk with you, help with reminders and make it easier to contact your family.
+      SAATHI AI can listen to your questions and speak with you.
+      Your microphone is used when you start talking.
+      Internet access is needed for AI answers.
+      Notifications can help with medicine reminders.
     </p>
-    <strong id="permissionHeading">Why might we need permissions?</strong>
-    <ul id="permissionList">
-      <li>Microphone: to listen when you want to talk.</li>
-      <li>Notifications: to remind you about medicines.</li>
-      <li>Phone: to open your phone dialler when you ask to call family.</li>
-    </ul>
-    <p>Your permissions are requested only when you use the relevant feature.</p>
-  </div>
-  <button class="primary" id="startButton" onclick="startCompanion()">Continue</button>
-</section>
-
-<!-- MAIN COMPANION SCREEN -->
-<section id="home" class="screen">
-  <div class="topbar">
-    <div>
-      <div class="logo">SAATHI AI</div>
-      <small>Your Voice. Your Companion.</small>
-    </div>
-    <div class="language-label" id="profileLabel"></div>
+    <button id="continueButton" onclick="startCompanion()">Continue</button>
   </div>
 
-  <h1 class="greeting" id="greeting"></h1>
-  <div class="character-area">
-    <div class="character-fallback" id="characterFallback">👴</div>
-    <img id="characterImage" alt="Your SAATHI AI companion">
+  <div id="homeScreen" class="screen">
+    <h1>SAATHI AI</h1>
+    <p id="greeting">So, how are you?</p>
+
+    <div class="avatar" id="avatar">👴</div>
+
+    <button class="mic" id="micButton" onclick="startListening()">🎙️</button>
+    <h2 id="talkLabel">Let's Talk</h2>
+
+    <div class="status" id="status"></div>
+    <div id="answer"></div>
+
+    <button class="plus" onclick="openSettings()">+</button>
+    <p class="small" id="settingsLabel">Family settings</p>
   </div>
 
-  <button class="mic-button" id="micButton" onclick="startListening()" aria-label="Start talking">🎙</button>
-  <div class="mic-label" id="micLabel"></div>
-  <div class="status" id="statusText"></div>
+  <div id="settingsScreen" class="screen">
+    <h1 id="settingsTitle">Family Settings</h1>
+    <p id="settingsDescription">Manage family contacts and medicine reminders.</p>
 
-  <button class="plus-button" onclick="openSettings()" aria-label="Family settings">+</button>
-</section>
+    <h2 id="contactHeading">Family contacts</h2>
+    <input id="contactName" placeholder="Contact name">
+    <input id="contactNumber" placeholder="Phone number" type="tel">
+    <button onclick="addContact()" id="addContactButton">Add contact</button>
+    <div id="contactList"></div>
 
-<!-- FAMILY SETTINGS -->
-<div class="modal" id="settingsModal">
-  <div class="modal-content">
-    <button class="close-button" onclick="closeSettings()" aria-label="Close">×</button>
-    <h2 id="settingsTitle">Family Settings</h2>
-    <p id="settingsDescription">Add family contacts and medicine reminders here.</p>
+    <hr>
 
-    <div class="setting-section">
-      <h3 id="contactHeading">Family phone numbers</h3>
-      <label id="contactNameLabel">Family member's name</label>
-      <input id="contactName" placeholder="Name">
-      <label id="contactNumberLabel">Phone number</label>
-      <input id="contactNumber" type="tel" placeholder="Phone number">
-      <button class="primary" onclick="saveContact()" id="saveContactButton">Save contact</button>
-      <div id="contactList"></div>
-    </div>
+    <h2 id="medicineHeading">Medicine reminders</h2>
+    <input id="medicineName" placeholder="Medicine name">
+    <input id="medicineTime" type="time">
+    <input id="medicineInstructions" placeholder="Instructions (optional)">
+    <button onclick="addMedicine()" id="addMedicineButton">Save reminder</button>
+    <div id="medicineList"></div>
 
-    <div class="setting-section">
-      <h3 id="medicineHeading">Medicine reminders</h3>
-      <label id="medicineNameLabel">Medicine name</label>
-      <input id="medicineName" placeholder="Medicine name">
-      <label id="medicineTimeLabel">Reminder time</label>
-      <input id="medicineTime" type="time">
-      <label id="medicineDaysLabel">Days</label>
-      <select id="medicineDays">
-        <option value="Every day">Every day</option>
-        <option value="Monday to Friday">Monday to Friday</option>
-        <option value="Saturday and Sunday">Saturday and Sunday</option>
-      </select>
-      <label id="medicineInstructionsLabel">Instructions</label>
-      <textarea id="medicineInstructions" rows="2" placeholder="Instructions provided by your caregiver"></textarea>
-      <button class="primary" onclick="saveMedicine()" id="saveMedicineButton">Save reminder</button>
-      <div id="medicineList"></div>
-    </div>
-
-    <button class="secondary" onclick="closeSettings()" id="doneButton">Done</button>
+    <button class="back" onclick="showScreen('homeScreen')" id="backButton">Back</button>
   </div>
+
 </div>
 
 <script>
+const API_URL = "https://holy-bread-723.hortiflora80.workers.dev/";
+
 let selectedLanguage = "";
 let selectedGender = "";
-
-let contacts = JSON.parse(localStorage.getItem("saathiContacts") || "[]");
-let medicines = JSON.parse(localStorage.getItem("saathiMedicines") || "[]");
+let recognition = null;
 
 const translations = {
-  pa: {
-    greeting: "ਹੋਰ ਕਿਵੇਂ ਹੋ?",
-    mic: "ਗੱਲਾਂ ਕਰੀਏ",
-    status: "ਮੈਂ ਤੁਹਾਡੇ ਨਾਲ ਗੱਲਾਂ ਕਰਨ ਲਈ ਇੱਥੇ ਹਾਂ।",
-    male: "ਪੰਜਾਬੀ · ਮਰਦ",
-    female: "ਪੰਜਾਬੀ · ਔਰਤ",
-    listening: "ਮੈਂ ਸੁਣ ਰਿਹਾ ਹਾਂ...",
-    heard: "ਤੁਸੀਂ ਕਿਹਾ: ",
-    unavailable: "ਤੁਹਾਡੇ ਬ੍ਰਾਊਜ਼ਰ ਵਿੱਚ ਆਵਾਜ਼ ਦੀ ਸਹੂਲਤ ਉਪਲਬਧ ਨਹੀਂ ਹੈ।",
-    reply: "ਜੀ, ਮੈਂ ਤੁਹਾਡੀ ਗੱਲ ਸੁਣ ਰਿਹਾ ਹਾਂ। ਤੁਸੀਂ ਮੈਨੂੰ ਹੋਰ ਦੱਸੋ।",
-    settings: "ਪਰਿਵਾਰ ਦੀਆਂ ਸੈਟਿੰਗਾਂ",
-    description: "ਇੱਥੇ ਪਰਿਵਾਰ ਦੇ ਨੰਬਰ ਅਤੇ ਦਵਾਈਆਂ ਦੇ ਰਿਮਾਈਂਡਰ ਜੋੜੋ।",
-    contacts: "ਪਰਿਵਾਰ ਦੇ ਫ਼ੋਨ ਨੰਬਰ",
-    contactName: "ਪਰਿਵਾਰਕ ਮੈਂਬਰ ਦਾ ਨਾਮ",
-    contactNumber: "ਫ਼ੋਨ ਨੰਬਰ",
-    saveContact: "ਨੰਬਰ ਸੰਭਾਲੋ",
-    medicines: "ਦਵਾਈਆਂ ਦੇ ਰਿਮਾਈਂਡਰ",
-    medicineName: "ਦਵਾਈ ਦਾ ਨਾਮ",
-    medicineTime: "ਰਿਮਾਈਂਡਰ ਦਾ ਸਮਾਂ",
-    medicineDays: "ਦਿਨ",
-    instructions: "ਹਦਾਇਤਾਂ",
-    saveMedicine: "ਰਿਮਾਈਂਡਰ ਸੰਭਾਲੋ",
-    done: "ਹੋ ਗਿਆ",
-    taken: "ਦਵਾਈ ਲੈ ਲਈ",
-    snooze: "10 ਮਿੰਟ ਬਾਅਦ ਯਾਦ ਕਰਾਓ",
-    confirmCall: "ਕੀ ਤੁਸੀਂ ਇਸ ਨੰਬਰ 'ਤੇ ਕਾਲ ਕਰਨਾ ਚਾਹੁੰਦੇ ਹੋ?"
+  pa:{
+    greeting:"ਹੋਰ ਕਿਵੇਂ ਹੋ?",
+    talk:"ਗੱਲਾਂ ਕਰੀਏ",
+    settings:"ਪਰਿਵਾਰ ਦੀਆਂ ਸੈਟਿੰਗਾਂ",
+    listening:"ਮੈਂ ਸੁਣ ਰਿਹਾ ਹਾਂ...",
+    thinking:"ਮੈਂ ਤੁਹਾਡੇ ਸਵਾਲ ਦਾ ਜਵਾਬ ਲੱਭ ਰਿਹਾ ਹਾਂ...",
+    error:"ਮਾਫ਼ ਕਰਨਾ, ਇਸ ਸਮੇਂ ਜਵਾਬ ਨਹੀਂ ਮਿਲ ਸਕਿਆ। ਕਿਰਪਾ ਕਰਕੇ ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।",
+    contact:"ਪਰਿਵਾਰਕ ਮੈਂਬਰ",
+    medicine:"ਦਵਾਈਆਂ ਦੀ ਯਾਦ ਦਿਹਾਨੀ",
+    add:"ਸੰਪਰਕ ਜੋੜੋ",
+    save:"ਯਾਦ ਦਿਹਾਨੀ ਸੰਭਾਲੋ",
+    back:"ਵਾਪਸ",
+    intro:"SAATHI AI ਤੁਹਾਡੀ ਗੱਲ ਸੁਣ ਸਕਦਾ ਹੈ ਅਤੇ ਤੁਹਾਡੇ ਸਵਾਲਾਂ ਦੇ ਜਵਾਬ ਦੇ ਸਕਦਾ ਹੈ। ਮਾਈਕ੍ਰੋਫ਼ੋਨ ਦੀ ਵਰਤੋਂ ਗੱਲ ਸ਼ੁਰੂ ਕਰਨ ਵੇਲੇ ਹੋਵੇਗੀ। AI ਦੇ ਜਵਾਬਾਂ ਲਈ ਇੰਟਰਨੈੱਟ ਦੀ ਲੋੜ ਹੈ।",
+    name:"ਨਾਮ",
+    number:"ਫ਼ੋਨ ਨੰਬਰ",
+    medicineName:"ਦਵਾਈ ਦਾ ਨਾਮ",
+    instructions:"ਹਦਾਇਤਾਂ (ਵਿਕਲਪਿਕ)",
+    saved:"ਸੰਭਾਲਿਆ ਗਿਆ",
+    call:"ਕੀ ਤੁਸੀਂ ਇਸ ਨੰਬਰ 'ਤੇ ਕਾਲ ਕਰਨਾ ਚਾਹੁੰਦੇ ਹੋ?"
   },
-
-  hi: {
-    greeting: "और बताइए, कैसे हैं आप?",
-    mic: "बातें करें",
-    status: "मैं आपसे बातें करने के लिए यहाँ हूँ।",
-    male: "हिन्दी · पुरुष",
-    female: "हिन्दी · महिला",
-    listening: "मैं सुन रहा हूँ...",
-    heard: "आपने कहा: ",
-    unavailable: "आपके ब्राउज़र में आवाज़ की सुविधा उपलब्ध नहीं है।",
-    reply: "जी, मैं आपकी बात सुन रहा हूँ। आप मुझे और बताइए।",
-    settings: "परिवार की सेटिंग्स",
-    description: "यहाँ परिवार के नंबर और दवाइयों के रिमाइंडर जोड़ें।",
-    contacts: "परिवार के फोन नंबर",
-    contactName: "परिवार के सदस्य का नाम",
-    contactNumber: "फोन नंबर",
-    saveContact: "नंबर सेव करें",
-    medicines: "दवाइयों के रिमाइंडर",
-    medicineName: "दवाई का नाम",
-    medicineTime: "रिमाइंडर का समय",
-    medicineDays: "दिन",
-    instructions: "निर्देश",
-    saveMedicine: "रिमाइंडर सेव करें",
-    done: "हो गया",
-    taken: "दवाई ले ली",
-    snooze: "10 मिनट बाद याद दिलाएँ",
-    confirmCall: "क्या आप इस नंबर पर कॉल करना चाहते हैं?"
+  hi:{
+    greeting:"और बताइए, कैसे हैं आप?",
+    talk:"बातें करें",
+    settings:"परिवार की सेटिंग",
+    listening:"मैं सुन रहा हूँ...",
+    thinking:"मैं आपके सवाल का जवाब ढूँढ रहा हूँ...",
+    error:"माफ़ कीजिए, अभी जवाब नहीं मिल पाया। कृपया फिर कोशिश करें।",
+    contact:"परिवार के सदस्य",
+    medicine:"दवाई की याद दिलाना",
+    add:"संपर्क जोड़ें",
+    save:"रिमाइंडर सेव करें",
+    back:"वापस",
+    intro:"SAATHI AI आपकी बात सुन सकता है और सवालों के जवाब दे सकता है। माइक्रोफ़ोन का उपयोग तभी होगा जब आप बोलना शुरू करेंगे। AI के जवाबों के लिए इंटरनेट ज़रूरी है।",
+    name:"नाम",
+    number:"फ़ोन नंबर",
+    medicineName:"दवाई का नाम",
+    instructions:"निर्देश (वैकल्पिक)",
+    saved:"सेव हो गया",
+    call:"क्या आप इस नंबर पर कॉल करना चाहते हैं?"
   },
-
-  en: {
-    greeting: "So, how are you?",
-    mic: "Let's Talk",
-    status: "I am here to talk with you.",
-    male: "English · Male",
-    female: "English · Female",
-    listening: "I am listening...",
-    heard: "You said: ",
-    unavailable: "Voice recognition is not available in this browser.",
-    reply: "I am listening. Please tell me more.",
-    settings: "Family Settings",
-    description: "Add family contacts and medicine reminders here.",
-    contacts: "Family phone numbers",
-    contactName: "Family member's name",
-    contactNumber: "Phone number",
-    saveContact: "Save contact",
-    medicines: "Medicine reminders",
-    medicineName: "Medicine name",
-    medicineTime: "Reminder time",
-    medicineDays: "Days",
-    instructions: "Instructions",
-    saveMedicine: "Save reminder",
-    done: "Done",
-    taken: "Taken",
-    snooze: "Remind me in 10 minutes",
-    confirmCall: "Would you like to call this number?"
+  en:{
+    greeting:"So, how are you?",
+    talk:"Let's Talk",
+    settings:"Family settings",
+    listening:"I'm listening...",
+    thinking:"I'm finding an answer for you...",
+    error:"Sorry, I couldn't get an answer right now. Please try again.",
+    contact:"Family contacts",
+    medicine:"Medicine reminders",
+    add:"Add contact",
+    save:"Save reminder",
+    back:"Back",
+    intro:"SAATHI AI can listen to your questions and speak with you. Your microphone is used when you start talking. Internet access is needed for AI answers.",
+    name:"Contact name",
+    number:"Phone number",
+    medicineName:"Medicine name",
+    instructions:"Instructions (optional)",
+    saved:"Saved",
+    call:"Would you like to call this number?"
   }
 };
 
-function showScreen(id) {
-  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+function t(key){
+  return translations[selectedLanguage]?.[key] || translations.en[key];
+}
+
+function showScreen(id){
+  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
   document.getElementById(id).classList.add("active");
 }
 
-function chooseLanguage(language) {
-  selectedLanguage = language;
+function chooseLanguage(language){
+  selectedLanguage=language;
+  document.documentElement.lang=language==="pa"?"pa":language==="hi"?"hi":"en";
   showScreen("genderScreen");
-
-  document.getElementById("maleChoice").textContent =
-    language === "pa" ? "ਮਰਦ ਸਾਥੀ" :
-    language === "hi" ? "पुरुष साथी" : "Male Companion";
-
-  document.getElementById("femaleChoice").textContent =
-    language === "pa" ? "ਔਰਤ ਸਾਥੀ" :
-    language === "hi" ? "महिला साथी" : "Female Companion";
-
-  document.getElementById("genderHeading").textContent =
-    language === "pa" ? "ਆਪਣਾ ਸਾਥੀ ਚੁਣੋ" :
-    language === "hi" ? "अपना साथी चुनें" : "Choose your companion";
-
-  document.getElementById("genderSubtitle").textContent =
-    language === "pa" ? "ਤੁਸੀਂ ਕਿਸ ਨਾਲ ਗੱਲ ਕਰਨਾ ਚਾਹੋਗੇ?" :
-    language === "hi" ? "आप किससे बातें करना चाहेंगे?" :
-    "Select the companion you would like to talk to.";
 }
 
-function chooseGender(gender) {
-  selectedGender = gender;
+function chooseGender(gender){
+  selectedGender=gender;
+  document.getElementById("introTitle").textContent=
+    selectedLanguage==="pa"?"ਸਾਥੀ AI ਵਿੱਚ ਤੁਹਾਡਾ ਸਵਾਗਤ ਹੈ":
+    selectedLanguage==="hi"?"SAATHI AI में आपका स्वागत है":"Welcome to SAATHI AI";
 
-  document.getElementById("introHeading").textContent =
-    selectedLanguage === "pa" ? "SAATHI AI ਵਿੱਚ ਜੀ ਆਇਆਂ ਨੂੰ" :
-    selectedLanguage === "hi" ? "SAATHI AI में आपका स्वागत है" :
-    "Welcome to SAATHI AI";
-
-  document.getElementById("introText").textContent =
-    selectedLanguage === "pa" ?
-    "SAATHI AI ਤੁਹਾਡੇ ਨਾਲ ਗੱਲਾਂ ਕਰਨ, ਦਵਾਈਆਂ ਦੇ ਰਿਮਾਈਂਡਰ ਦੇਣ ਅਤੇ ਪਰਿਵਾਰ ਨਾਲ ਸੰਪਰਕ ਕਰਨ ਵਿੱਚ ਮਦਦ ਕਰੇਗਾ।" :
-    selectedLanguage === "hi" ?
-    "SAATHI AI आपसे बातें करने, दवाइयों की याद दिलाने और परिवार से संपर्क करने में मदद करेगा।" :
-    "SAATHI AI can talk with you, help with reminders and make it easier to contact your family.";
+  document.getElementById("introText").textContent=t("intro");
+  document.getElementById("continueButton").textContent=
+    selectedLanguage==="pa"?"ਅੱਗੇ ਵਧੋ":
+    selectedLanguage==="hi"?"आगे बढ़ें":"Continue";
 
   showScreen("introScreen");
 }
 
-function startCompanion() {
-  const t = translations[selectedLanguage];
+function startCompanion(){
+  const avatar=document.getElementById("avatar");
+  avatar.textContent=selectedGender==="male"?"👴":"👵";
 
-  document.getElementById("greeting").textContent = t.greeting;
-  document.getElementById("micLabel").textContent = t.mic;
-  document.getElementById("statusText").textContent = t.status;
+  document.getElementById("greeting").textContent=t("greeting");
+  document.getElementById("talkLabel").textContent=t("talk");
+  document.getElementById("settingsLabel").textContent=t("settings");
+  document.getElementById("settingsTitle").textContent=t("settings");
+  document.getElementById("settingsDescription").textContent=t("settings");
+  document.getElementById("contactHeading").textContent=t("contact");
+  document.getElementById("medicineHeading").textContent=t("medicine");
+  document.getElementById("addContactButton").textContent=t("add");
+  document.getElementById("addMedicineButton").textContent=t("save");
+  document.getElementById("backButton").textContent=t("back");
+  document.getElementById("contactName").placeholder=t("name");
+  document.getElementById("contactNumber").placeholder=t("number");
+  document.getElementById("medicineName").placeholder=t("medicineName");
+  document.getElementById("medicineInstructions").placeholder=t("instructions");
 
-  document.getElementById("profileLabel").textContent =
-    selectedGender === "male" ? t.male : t.female;
-
-  const imageFiles = {
-    "pa-male": "assets/punjabi-male.png",
-    "pa-female": "assets/punjabi-female.png",
-    "hi-male": "assets/hindi-male.png",
-    "hi-female": "assets/hindi-female.png",
-    "en-male": "assets/english-male.png",
-    "en-female": "assets/english-female.png"
-  };
-
-  const key = selectedLanguage + "-" + selectedGender;
-  const img = document.getElementById("characterImage");
-  const fallback = document.getElementById("characterFallback");
-
-  img.style.display = "none";
-  fallback.style.display = "flex";
-  fallback.textContent = selectedGender === "male" ? "👴" : "👵";
-
-  img.onload = () => {
-    img.style.display = "block";
-    fallback.style.display = "none";
-  };
-
-  img.onerror = () => {
-    img.style.display = "none";
-    fallback.style.display = "flex";
-  };
-
-  img.src = imageFiles[key];
-
-  applySettingsLanguage();
-  renderContacts();
-  renderMedicines();
-  showScreen("home");
+  showScreen("homeScreen");
+  speak(t("greeting"));
 }
 
-function applySettingsLanguage() {
-  const t = translations[selectedLanguage];
-
-  document.getElementById("settingsTitle").textContent = t.settings;
-  document.getElementById("settingsDescription").textContent = t.description;
-  document.getElementById("contactHeading").textContent = t.contacts;
-  document.getElementById("contactNameLabel").textContent = t.contactName;
-  document.getElementById("contactNumberLabel").textContent = t.contactNumber;
-  document.getElementById("saveContactButton").textContent = t.saveContact;
-  document.getElementById("medicineHeading").textContent = t.medicines;
-  document.getElementById("medicineNameLabel").textContent = t.medicineName;
-  document.getElementById("medicineTimeLabel").textContent = t.medicineTime;
-  document.getElementById("medicineDaysLabel").textContent = t.medicineDays;
-  document.getElementById("medicineInstructionsLabel").textContent = t.instructions;
-  document.getElementById("saveMedicineButton").textContent = t.saveMedicine;
-  document.getElementById("doneButton").textContent = t.done;
+function setStatus(message){
+  document.getElementById("status").textContent=message;
 }
 
-function openSettings() {
-  document.getElementById("settingsModal").classList.add("open");
-}
+function speak(message){
+  if(!("speechSynthesis" in window)) return;
 
-function closeSettings() {
-  document.getElementById("settingsModal").classList.remove("open");
-}
+  window.speechSynthesis.cancel();
 
-function saveContact() {
-  const name = document.getElementById("contactName").value.trim();
-  const number = document.getElementById("contactNumber").value.trim();
+  const voices=window.speechSynthesis.getVoices();
+  const languageCode={
+    pa:"pa-IN",
+    hi:"hi-IN",
+    en:"en-IN"
+  }[selectedLanguage];
 
-  if (!name || !number) {
-    alert("Please enter both a name and a phone number.");
+  const matchingVoice=voices.find(v=>
+    v.lang.toLowerCase()===languageCode.toLowerCase()
+  );
+
+  // Never substitute Hindi voice for Punjabi.
+  if(!matchingVoice){
+    setStatus(
+      selectedLanguage==="pa"
+      ?"ਪੰਜਾਬੀ ਆਵਾਜ਼ ਇਸ ਬ੍ਰਾਊਜ਼ਰ ਵਿੱਚ ਉਪਲਬਧ ਨਹੀਂ ਹੈ।"
+      :selectedLanguage==="hi"
+      ?"इस ब्राउज़र में हिन्दी आवाज़ उपलब्ध नहीं है।"
+      :"No matching English voice is available."
+    );
     return;
   }
 
-  contacts.push({ name, number });
-  localStorage.setItem("saathiContacts", JSON.stringify(contacts));
-
-  document.getElementById("contactName").value = "";
-  document.getElementById("contactNumber").value = "";
-  renderContacts();
+  const utterance=new SpeechSynthesisUtterance(message);
+  utterance.voice=matchingVoice;
+  utterance.lang=languageCode;
+  utterance.rate=0.88;
+  window.speechSynthesis.speak(utterance);
 }
 
-function renderContacts() {
-  const box = document.getElementById("contactList");
-  box.innerHTML = "";
+async function askSAATHI(question){
+  setStatus(t("thinking"));
+  document.getElementById("answer").textContent="";
 
-  contacts.forEach((contact, index) => {
-    const item = document.createElement("div");
-    item.className = "saved-item";
-
-    const name = document.createElement("strong");
-    name.textContent = contact.name + " — " + contact.number;
-
-    const call = document.createElement("button");
-    call.className = "small-button";
-    call.textContent = "Call";
-    call.onclick = () => callContact(index);
-
-    const remove = document.createElement("button");
-    remove.className = "small-button";
-    remove.textContent = "Delete";
-
-    remove.onclick = () => {
-      contacts.splice(index, 1);
-      localStorage.setItem("saathiContacts", JSON.stringify(contacts));
-      renderContacts();
-    };
-
-    item.append(name, document.createElement("br"), call, remove);
-    box.appendChild(item);
-  });
-}
-
-function callContact(index) {
-  const contact = contacts[index];
-  const t = translations[selectedLanguage];
-
-  if (confirm(t.confirmCall + "\n" + contact.name + " — " + contact.number)) {
-    window.location.href = "tel:" + contact.number;
-  }
-}
-
-function saveMedicine() {
-  const name = document.getElementById("medicineName").value.trim();
-  const time = document.getElementById("medicineTime").value;
-  const days = document.getElementById("medicineDays").value;
-  const instructions = document.getElementById("medicineInstructions").value.trim();
-
-  if (!name || !time) {
-    alert("Please enter the medicine name and reminder time.");
-    return;
-  }
-
-  medicines.push({ name, time, days, instructions });
-  localStorage.setItem("saathiMedicines", JSON.stringify(medicines));
-
-  document.getElementById("medicineName").value = "";
-  document.getElementById("medicineTime").value = "";
-  document.getElementById("medicineInstructions").value = "";
-
-  renderMedicines();
-}
-
-function renderMedicines() {
-  const box = document.getElementById("medicineList");
-  box.innerHTML = "";
-
-  medicines.forEach((medicine, index) => {
-    const item = document.createElement("div");
-    item.className = "saved-item";
-
-    const details = document.createElement("div");
-    details.textContent =
-      medicine.name + " — " + medicine.time + " (" + medicine.days + ")" +
-      (medicine.instructions ? "\n" + medicine.instructions : "");
-
-    const remove = document.createElement("button");
-    remove.className = "small-button";
-    remove.textContent = "Delete";
-
-    remove.onclick = () => {
-      medicines.splice(index, 1);
-      localStorage.setItem("saathiMedicines", JSON.stringify(medicines));
-      renderMedicines();
-    };
-
-    item.append(details, remove);
-    box.appendChild(item);
-  });
-}
-
-/* SAATHI AI — REAL AI VOICE CONNECTION */
-
-const API_URL = "https://holy-bread-723.hortiflora80.workers.dev/";
-
-function startListening() {
-  const SpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
-
-  const mic = document.getElementById("micButton");
-  const status = document.getElementById("statusText");
-  const t = translations[selectedLanguage];
-
-  if (!SpeechRecognition) {
-    status.textContent = t.unavailable;
-    return;
-  }
-
-  const recognition = new SpeechRecognition();
-
-  recognition.lang =
-    selectedLanguage === "pa" ? "pa-IN" :
-    selectedLanguage === "hi" ? "hi-IN" : "en-IN";
-
-  recognition.interimResults = false;
-  recognition.maxAlternatives = 1;
-  recognition.continuous = false;
-
-  recognition.onstart = () => {
-    mic.classList.add("listening");
-    status.textContent = t.listening;
-  };
-
-  recognition.onresult = async (event) => {
-    const spokenText = event.results[0][0].transcript.trim();
-
-    if (!spokenText) {
-      status.textContent = "Please try speaking again.";
-      return;
-    }
-
-    status.textContent = t.heard + spokenText + "\n\nSAATHI is thinking...";
-
-    try {
-      const response = await fetch(API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          question: spokenText,
-          language: selectedLanguage
-        })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.answer) {
-        throw new Error(data.error || "AI request failed.");
-      }
-
-      status.textContent = data.answer;
-      await speak(data.answer);
-
-    } catch (error) {
-      console.error("SAATHI AI error:", error);
-
-      status.textContent =
-        selectedLanguage === "pa"
-          ? "ਮਾਫ਼ ਕਰਨਾ, ਇਸ ਸਮੇਂ ਜਵਾਬ ਨਹੀਂ ਮਿਲ ਸਕਿਆ। ਦੁਬਾਰਾ ਕੋਸ਼ਿਸ਼ ਕਰੋ।"
-          : selectedLanguage === "hi"
-          ? "माफ़ कीजिए, अभी जवाब नहीं मिल सका। कृपया दोबारा कोशिश करें।"
-          : "Sorry, I couldn't get an answer right now. Please try again.";
-    }
-  };
-
-  recognition.onerror = (event) => {
-    status.textContent =
-      event.error === "not-allowed"
-        ? "Please allow microphone access."
-        : t.unavailable;
-  };
-
-  recognition.onend = () => {
-    mic.classList.remove("listening");
-  };
-
-  try {
-    recognition.start();
-  } catch (error) {
-    mic.classList.remove("listening");
-    status.textContent = "Please wait a moment and try again.";
-  }
-}
-
-/* GEMINI TEXT-TO-SPEECH */
-
-async function speak(message) {
-  const status = document.getElementById("statusText");
-
-  try {
-    const response = await fetch(API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        action: "speak",
-        text: message,
-        language: selectedLanguage
+  try{
+    const response=await fetch(API_URL,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        question:question,
+        language:selectedLanguage
       })
     });
 
-    const data = await response.json();
+    const data=await response.json();
 
-    if (!response.ok || !data.audio) {
-      throw new Error(data.details || data.error || "Speech generation failed.");
+    if(!response.ok){
+      throw new Error(data.error || "HTTP "+response.status);
     }
 
-    const binary = atob(data.audio);
-    const bytes = new Uint8Array(binary.length);
-
-    for (let i = 0; i < binary.length; i++) {
-      bytes[i] = binary.charCodeAt(i);
+    if(!data.answer){
+      throw new Error("No answer received from Worker.");
     }
 
-    const mimeType = data.mimeType || "audio/pcm;rate=24000";
-    let audioBlob;
+    document.getElementById("answer").textContent=data.answer;
+    setStatus("");
+    speak(data.answer);
 
-    if (mimeType.includes("wav")) {
-      audioBlob = new Blob([bytes], { type: "audio/wav" });
-    } else {
-      // Gemini PCM audio: 24 kHz, 16-bit, mono
-      const wavHeader = new ArrayBuffer(44);
-      const view = new DataView(wavHeader);
-
-      function writeText(offset, value) {
-        for (let i = 0; i < value.length; i++) {
-          view.setUint8(offset + i, value.charCodeAt(i));
-        }
-      }
-
-      writeText(0, "RIFF");
-      view.setUint32(4, 36 + bytes.length, true);
-      writeText(8, "WAVE");
-      writeText(12, "fmt ");
-      view.setUint32(16, 16, true);
-      view.setUint16(20, 1, true);
-      view.setUint16(22, 1, true);
-      view.setUint32(24, 24000, true);
-      view.setUint32(28, 48000, true);
-      view.setUint16(32, 2, true);
-      view.setUint16(34, 16, true);
-      writeText(36, "data");
-      view.setUint32(40, bytes.length, true);
-
-      audioBlob = new Blob(
-        [wavHeader, bytes],
-        { type: "audio/wav" }
-      );
-    }
-
-    const audioUrl = URL.createObjectURL(audioBlob);
-    const audio = new Audio(audioUrl);
-
-    audio.onended = () => URL.revokeObjectURL(audioUrl);
-    audio.onerror = () => URL.revokeObjectURL(audioUrl);
-
-    await audio.play();
-
-  } catch (error) {
-    console.error("SAATHI speech error:", error);
-
-    if (status) {
-      status.textContent +=
-        "\n\nPunjabi voice is temporarily unavailable. Please try again.";
-    }
+  }catch(error){
+    console.error("SAATHI AI error:",error);
+    document.getElementById("answer").textContent=t("error");
+    setStatus("Error: "+error.message);
   }
 }
 
-/* MEDICINE REMINDERS */
+function startListening(){
+  const SpeechRecognition=
+    window.SpeechRecognition || window.webkitSpeechRecognition;
 
-if ("Notification" in window) {
-  // Permission is requested when a reminder is saved.
-}
-
-let remindedToday = {};
-
-async function requestReminderPermission() {
-  if ("Notification" in window &&
-      Notification.permission === "default") {
-    try {
-      await Notification.requestPermission();
-    } catch (error) {
-      console.log("Notification permission unavailable.");
-    }
+  if(!SpeechRecognition){
+    setStatus("Speech recognition is not supported in this browser.");
+    return;
   }
+
+  recognition=new SpeechRecognition();
+  recognition.lang={
+    pa:"pa-IN",
+    hi:"hi-IN",
+    en:"en-IN"
+  }[selectedLanguage];
+
+  recognition.continuous=false;
+  recognition.interimResults=false;
+
+  recognition.onstart=()=>{
+    setStatus(t("listening"));
+    document.getElementById("micButton").textContent="🔴";
+  };
+
+  recognition.onresult=async(event)=>{
+    const question=event.results[0][0].transcript;
+    document.getElementById("answer").textContent=question;
+    await askSAATHI(question);
+  };
+
+  recognition.onerror=(event)=>{
+    setStatus("Microphone error: "+event.error);
+  };
+
+  recognition.onend=()=>{
+    document.getElementById("micButton").textContent="🎙️";
+  };
+
+  recognition.start();
 }
 
-const originalSaveMedicine = saveMedicine;
+// Family contacts
+function getContacts(){
+  return JSON.parse(localStorage.getItem("saathiContacts")||"[]");
+}
 
-saveMedicine = async function() {
-  await requestReminderPermission();
-  originalSaveMedicine();
-};
+function addContact(){
+  const name=document.getElementById("contactName").value.trim();
+  const number=document.getElementById("contactNumber").value.trim();
 
-function checkReminders() {
-  const now = new Date();
+  if(!name||!number){
+    alert("Please enter both name and phone number.");
+    return;
+  }
 
-  const currentTime =
-    String(now.getHours()).padStart(2, "0") + ":" +
-    String(now.getMinutes()).padStart(2, "0");
+  const contacts=getContacts();
+  contacts.push({name,number});
+  localStorage.setItem("saathiContacts",JSON.stringify(contacts));
 
-  const today = now.toDateString();
+  document.getElementById("contactName").value="";
+  document.getElementById("contactNumber").value="";
+  renderContacts();
+}
 
-  medicines.forEach((medicine, index) => {
-    const key = today + "-" + index;
+function renderContacts(){
+  const list=document.getElementById("contactList");
+  list.innerHTML="";
 
-    if (medicine.time === currentTime && !remindedToday[key]) {
-      remindedToday[key] = true;
+  getContacts().forEach((contact,index)=>{
+    const div=document.createElement("div");
+    div.className="item";
 
-      const message = "Medicine reminder: " + medicine.name;
+    const title=document.createElement("strong");
+    title.textContent=contact.name+" — "+contact.number;
 
-      if ("Notification" in window &&
-          Notification.permission === "granted") {
-        new Notification("SAATHI AI", {
-          body: message
-        });
-      } else {
-        alert(message);
+    const call=document.createElement("button");
+    call.textContent="Call";
+    call.onclick=()=>{
+      if(confirm(t("call")+" "+contact.name+"?")){
+        window.location.href="tel:"+contact.number;
       }
-    }
+    };
+
+    const remove=document.createElement("button");
+    remove.textContent="×";
+    remove.className="back";
+    remove.onclick=()=>{
+      const contacts=getContacts();
+      contacts.splice(index,1);
+      localStorage.setItem("saathiContacts",JSON.stringify(contacts));
+      renderContacts();
+    };
+
+    div.append(title,document.createElement("br"),call,remove);
+    list.appendChild(div);
   });
 }
 
-setInterval(checkReminders, 15000);
+// Medicine reminders
+function getMedicines(){
+  return JSON.parse(localStorage.getItem("saathiMedicines")||"[]");
+}
 
+async function addMedicine(){
+  const name=document.getElementById("medicineName").value.trim();
+  const time=document.getElementById("medicineTime").value;
+  const instructions=document.getElementById("medicineInstructions").value.trim();
+
+  if(!name||!time){
+    alert("Please enter medicine name and time.");
+    return;
+  }
+
+  if("Notification" in window && Notification.permission==="default"){
+    await Notification.requestPermission();
+  }
+
+  const medicines=getMedicines();
+  medicines.push({name,time,instructions,lastReminder:""});
+  localStorage.setItem("saathiMedicines",JSON.stringify(medicines));
+
+  document.getElementById("medicineName").value="";
+  document.getElementById("medicineTime").value="";
+  document.getElementById("medicineInstructions").value="";
+  renderMedicines();
+}
+
+function renderMedicines(){
+  const list=document.getElementById("medicineList");
+  list.innerHTML="";
+
+  getMedicines().forEach((medicine,index)=>{
+    const div=document.createElement("div");
+    div.className="item";
+
+    const title=document.createElement("strong");
+    title.textContent=medicine.name+" — "+medicine.time;
+
+    const details=document.createElement("p");
+    details.textContent=medicine.instructions||"";
+
+    const remove=document.createElement("button");
+    remove.textContent="Remove";
+    remove.className="back";
+    remove.onclick=()=>{
+      const medicines=getMedicines();
+      medicines.splice(index,1);
+      localStorage.setItem("saathiMedicines",JSON.stringify(medicines));
+      renderMedicines();
+    };
+
+    div.append(title,details,remove);
+    list.appendChild(div);
+  });
+}
+
+function checkReminders(){
+  const now=new Date();
+  const currentTime=now.toTimeString().slice(0,5);
+  const today=now.toDateString();
+  const medicines=getMedicines();
+
+  medicines.forEach(medicine=>{
+    if(medicine.time===currentTime && medicine.lastReminder!==today){
+      if("Notification" in window && Notification.permission==="granted"){
+        new Notification("SAATHI AI - Medicine Reminder",{
+          body:"Time for "+medicine.name+
+            (medicine.instructions?" — "+medicine.instructions:"")
+        });
+      }
+
+      medicine.lastReminder=today;
+    }
+  });
+
+  localStorage.setItem("saathiMedicines",JSON.stringify(medicines));
+}
+
+function openSettings(){
+  renderContacts();
+  renderMedicines();
+  showScreen("settingsScreen");
+}
+
+setInterval(checkReminders,15000);
 </script>
-
 </body>
 </html>
