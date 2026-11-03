@@ -1,0 +1,238 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAATHI AI - Your Voice. Your Companion.</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: linear-gradient(135deg, #e8f4ff, #f9edff);
+      color: #20304a;
+      min-height: 100vh;
+    }
+    header {
+      background: #173b67;
+      color: white;
+      padding: 20px;
+      text-align: center;
+    }
+    header h1 { margin: 0; font-size: 28px; }
+    header p { margin: 7px 0 0; }
+    main {
+      max-width: 650px;
+      margin: 28px auto;
+      padding: 20px;
+    }
+    .panel {
+      background: white;
+      border-radius: 20px;
+      padding: 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 5px 20px #263b5915;
+    }
+    h2 { text-align: center; }
+    button, select, input {
+      font-size: 17px;
+      padding: 13px;
+      border-radius: 12px;
+      border: 1px solid #ccd5e2;
+      margin: 6px 0;
+    }
+    button {
+      background: #245d99;
+      color: white;
+      border: 0;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .5; }
+    .choices {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 10px;
+    }
+    .choices button { min-width: 110px; }
+    .avatar {
+      font-size: 90px;
+      text-align: center;
+      margin: 10px;
+    }
+    .full { width: 100%; }
+    #answer {
+      background: #f1f6fc;
+      padding: 15px;
+      border-radius: 12px;
+      min-height: 55px;
+      line-height: 1.6;
+    }
+    label { display: block; font-weight: bold; margin-top: 12px; }
+    input, select { width: 100%; }
+    .hidden { display: none; }
+    footer { text-align: center; padding: 20px; color: #53657b; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>SAATHI AI</h1>
+  <p>Your Voice. Your Companion.</p>
+</header>
+
+<main>
+  <section class="panel" id="languagePanel">
+    <h2>Choose Your Language</h2>
+    <div class="choices">
+      <button onclick="chooseLanguage('pa-IN')">ਪੰਜਾਬੀ</button>
+      <button onclick="chooseLanguage('hi-IN')">हिन्दी</button>
+      <button onclick="chooseLanguage('en-IN')">English</button>
+    </div>
+  </section>
+
+  <section class="panel hidden" id="genderPanel">
+    <h2>Choose Your Companion</h2>
+    <div class="choices">
+      <button onclick="chooseGender('male')">Male</button>
+      <button onclick="chooseGender('female')">Female</button>
+    </div>
+  </section>
+
+  <section class="panel hidden" id="homePanel">
+    <h2>Your Companion</h2>
+    <div class="avatar" id="avatar">👴</div>
+    <p id="welcome" style="text-align:center"></p>
+    <h2>How can I help you?</h2>
+    <div id="answer">Press the microphone and speak, or type your question below.</div>
+    <input id="question" placeholder="Type your question here">
+    <button class="full" onclick="speakQuestion()">🎤 Speak</button>
+    <button class="full" onclick="readText()">🔊 Read welcome message</button>
+    <button class="full" onclick="changeLanguage()">Change language</button>
+  </section>
+
+  <section class="panel">
+    <h2>Medicine Reminder</h2>
+    <label>Medicine name</label>
+    <input id="medicine" placeholder="Enter medicine name">
+    <label>Reminder time</label>
+    <input id="medicineTime" type="time">
+    <button class="full" onclick="setReminder()">Set Reminder</button>
+    <p id="reminderStatus">No reminder set.</p>
+  </section>
+
+  <section class="panel">
+    <h2>Family Calling</h2>
+    <label>Family member's name</label>
+    <input id="familyName" placeholder="Enter name">
+    <label>Phone number</label>
+    <input id="familyPhone" type="tel" placeholder="Enter phone number">
+    <button class="full" onclick="prepareCall()">Call Family</button>
+    <p id="callStatus">Your call will be prepared for confirmation.</p>
+  </section>
+</main>
+
+<footer>Made with care for our elders ❤️</footer>
+
+<script>
+let selectedLanguage = 'en-IN';
+let selectedGender = 'male';
+
+const messages = {
+  'en-IN': 'Hello! I am your SAATHI. How can I help you today?',
+  'hi-IN': 'नमस्ते! मैं आपका साथी हूँ। आज मैं आपकी क्या मदद कर सकता हूँ?',
+  'pa-IN': 'ਸਤ ਸ੍ਰੀ ਅਕਾਲ! ਮੈਂ ਤੁਹਾਡਾ ਸਾਥੀ ਹਾਂ। ਅੱਜ ਮੈਂ ਤੁਹਾਡੀ ਕੀ ਮਦਦ ਕਰ ਸਕਦਾ ਹਾਂ?'
+};
+
+function chooseLanguage(language) {
+  selectedLanguage = language;
+  document.getElementById('languagePanel').classList.add('hidden');
+  document.getElementById('genderPanel').classList.remove('hidden');
+}
+
+function chooseGender(gender) {
+  selectedGender = gender;
+  document.getElementById('genderPanel').classList.add('hidden');
+  document.getElementById('homePanel').classList.remove('hidden');
+  document.getElementById('avatar').textContent =
+    gender === 'male' ? '👴' : '👵';
+  document.getElementById('welcome').textContent = messages[selectedLanguage];
+  speak(messages[selectedLanguage]);
+}
+
+function speak(text) {
+  if (!('speechSynthesis' in window)) return;
+  speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = selectedLanguage;
+  speechSynthesis.speak(utterance);
+}
+
+function readText() {
+  speak(messages[selectedLanguage]);
+}
+
+function speakQuestion() {
+  const SpeechRecognition =
+    window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    document.getElementById('answer').textContent =
+      'Voice input is not supported in this browser. Please type instead.';
+    return;
+  }
+  const recognition = new SpeechRecognition();
+  recognition.lang = selectedLanguage;
+  recognition.onresult = event => {
+    const text = event.results[0][0].transcript;
+    document.getElementById('question').value = text;
+    document.getElementById('answer').textContent =
+      'I heard: ' + text + '. Live AI answers will be connected in the next development step.';
+  };
+  recognition.onerror = () => {
+    document.getElementById('answer').textContent =
+      'I could not hear clearly. Please try again or type your question.';
+  };
+  recognition.start();
+}
+
+function changeLanguage() {
+  document.getElementById('homePanel').classList.add('hidden');
+  document.getElementById('genderPanel').classList.add('hidden');
+  document.getElementById('languagePanel').classList.remove('hidden');
+}
+
+let reminderTimer;
+function setReminder() {
+  const name = document.getElementById('medicine').value.trim();
+  const time = document.getElementById('medicineTime').value;
+  if (!name || !time) {
+    alert('Please enter the medicine name and time.');
+    return;
+  }
+  if (reminderTimer) clearInterval(reminderTimer);
+  document.getElementById('reminderStatus').textContent =
+    'Reminder set for ' + name + ' at ' + time +
+    '. Keep this page open for the reminder.';
+  reminderTimer = setInterval(() => {
+    const now = new Date();
+    const current = String(now.getHours()).padStart(2, '0') + ':' +
+                    String(now.getMinutes()).padStart(2, '0');
+    if (current === time) {
+      alert('Medicine reminder: ' + name + '. Please check your prescribed instructions.');
+    }
+  }, 30000);
+}
+
+function prepareCall() {
+  const name = document.getElementById('familyName').value.trim();
+  const phone = document.getElementById('familyPhone').value.trim();
+  if (!name || !phone) {
+    alert('Please enter the family member name and phone number.');
+    return;
+  }
+  if (!confirm('Do you want to call ' + name + ' at ' + phone + '?')) return;
+  window.location.href = 'tel:' + phone.replace(/[^\d+]/g, '');
+}
+</script>
+</body>
+</html>
