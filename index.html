@@ -369,8 +369,8 @@ footer {
     SAATHI is ready to listen.
   </div>
 
-  <button id="micButton" class="mic-button" aria-label="Start listening"
-    onclick="toggleListening()">🎙</button>
+  <button id="micButton" class="mic-button"
+    aria-label="Start listening" onclick="toggleListening()">🎙</button>
 
   <div class="panel">
     <div id="answer" class="answer" aria-live="polite">
@@ -457,26 +457,32 @@ footer {
 
 <script>
 
-/* ----------------------------------
+/* =========================================
    SAATHI AI CONFIGURATION
----------------------------------- */
-
-const API_URL =
-  "https://holy-bread-723.workers.dev/";
+========================================= */
 
 const REAL_API_URL =
   "https://holy-bread-723.hortiflora80.workers.dev/";
 
 let selectedLanguage = "";
 let selectedGender = "";
+
 let recognition = null;
 let listening = false;
 let speaking = false;
 let automaticListening = true;
-let currentAudio = null;
 
-let contacts = JSON.parse(localStorage.getItem("saathiContacts") || "[]");
-let medicines = JSON.parse(localStorage.getItem("saathiMedicines") || "[]");
+let currentAudio = null;
+let medicineTimerStarted = false;
+let speechRequestNumber = 0;
+
+let contacts = JSON.parse(
+  localStorage.getItem("saathiContacts") || "[]"
+);
+
+let medicines = JSON.parse(
+  localStorage.getItem("saathiMedicines") || "[]"
+);
 
 const languageLocale = {
   en: "en-IN",
@@ -505,6 +511,10 @@ const avatars = {
   }
 };
 
+/* =========================================
+   SCREEN NAVIGATION
+========================================= */
+
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach(screen => {
     screen.classList.remove("active");
@@ -512,10 +522,6 @@ function showScreen(id) {
 
   document.getElementById(id).classList.add("active");
 }
-
-/* ----------------------------------
-   ONBOARDING
----------------------------------- */
 
 function chooseLanguage(language, button) {
   selectedLanguage = language;
@@ -550,9 +556,8 @@ function goToIntroduction() {
     return;
   }
 
-  const avatar = avatars[selectedLanguage][selectedGender];
-
-  document.getElementById("introAvatar").textContent = avatar;
+  document.getElementById("introAvatar").textContent =
+    avatars[selectedLanguage][selectedGender];
 
   const introText = {
     en: "I am your friendly digital companion. I can answer questions, help with reminders and help you contact your family.",
@@ -566,9 +571,9 @@ function goToIntroduction() {
   showScreen("introScreen");
 }
 
-/* ----------------------------------
-   PERMISSIONS
----------------------------------- */
+/* =========================================
+   PERMISSIONS AND HOME
+========================================= */
 
 async function requestPermissions() {
   try {
@@ -583,7 +588,8 @@ async function requestPermissions() {
     alert("Microphone permission was not granted. You can still type questions.");
   }
 
-  if ("Notification" in window && Notification.permission === "default") {
+  if ("Notification" in window &&
+      Notification.permission === "default") {
     try {
       await Notification.requestPermission();
     } catch (error) {
@@ -593,10 +599,6 @@ async function requestPermissions() {
 
   enterHome();
 }
-
-/* ----------------------------------
-   HOME AND GREETING
----------------------------------- */
 
 function enterHome() {
   document.getElementById("homeAvatar").textContent =
@@ -611,21 +613,57 @@ function enterHome() {
   renderMedicines();
   startMedicineChecker();
 
-  speak(greetings[selectedLanguage], true);
+  automaticListening = true;
+
+  // Speak the welcome greeting.
+  speak(greetings[selectedLanguage]);
 }
 
 function setStatus(message) {
   document.getElementById("status").textContent = message;
 }
 
-/* ----------------------------------
-   PUNJABI SARVAM VOICE OUTPUT
----------------------------------- */
+/* =========================================
+   STOP CURRENT AUDIO
+========================================= */
+
+function stopCurrentAudio() {
+  speechRequestNumber++;
+
+  if ("speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+  }
+
+  if (currentAudio) {
+    currentAudio.onended = null;
+    currentAudio.onerror = null;
+    currentAudio.pause();
+
+    try {
+      currentAudio.currentTime = 0;
+    } catch (error) {
+      console.log(error);
+    }
+
+    currentAudio = null;
+  }
+
+  speaking = false;
+}
+
+/* =========================================
+   SARVAM PUNJABI TEXT-TO-SPEECH
+========================================= */
 
 async function speakPunjabi(message) {
+  const thisRequest = ++speechRequestNumber;
+
   try {
     stopListening();
-    window.speechSynthesis.cancel();
+
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
 
     if (currentAudio) {
       currentAudio.pause();
@@ -633,7 +671,7 @@ async function speakPunjabi(message) {
     }
 
     speaking = true;
-    setStatus("SAATHI is speaking Punjabi...");
+    setStatus("SAATHI is preparing Punjabi voice...");
 
     const response = await fetch(REAL_API_URL, {
       method: "POST",
@@ -642,79 +680,106 @@ async function speakPunjabi(message) {
       },
       body: JSON.stringify({
         action: "tts",
-        text: message,
+        text: String(message).slice(0, 2500),
         gender: selectedGender
       })
     });
 
-    const data = await response.json();
+    let data;
 
-    if (!response.ok || !data.audio) {
+    try {
+      data = await response.json();
+    } catch (error) {
+      throw new Error("Cloudflare returned an invalid response.");
+    }
+
+    if (!response.ok) {
       throw new Error(
-        data.error || "Punjabi voice could not be generated."
+        data.error || "Sarvam request failed. HTTP " + response.status
       );
     }
 
-    currentAudio = new Audio(
-      "data:audio/wav;base64," + data.audio
+    if (!data.audio) {
+      throw new Error("Sarvam did not return audio data.");
+    }
+
+    // Ignore an old request if a newer question has started.
+    if (thisRequest !== speechRequestNumber) {
+      return;
+    }
+
+    const mimeType = data.audioMimeType || "audio/mpeg";
+
+    const audio = new Audio(
+      "data:" + mimeType + ";base64," + data.audio
     );
 
-    currentAudio.onended = () => {
+    audio.preload = "auto";
+    currentAudio = audio;
+
+    audio.onended = () => {
+      if (thisRequest !== speechRequestNumber) return;
+
       currentAudio = null;
       speaking = false;
+
+      setStatus("SAATHI has finished speaking.");
 
       if (
         automaticListening &&
         document.getElementById("homeScreen").classList.contains("active")
       ) {
-        setTimeout(startListening, 700);
-      } else {
-        setStatus("SAATHI is ready.");
+        setTimeout(() => {
+          if (!speaking && automaticListening) {
+            startListening();
+          }
+        }, 700);
       }
     };
 
-    currentAudio.onerror = () => {
+    audio.onerror = () => {
+      if (thisRequest !== speechRequestNumber) return;
+
       currentAudio = null;
       speaking = false;
+
       setStatus("Punjabi audio playback failed. Please try again.");
+      console.error("Audio playback error", audio.error);
     };
 
-    await currentAudio.play();
+    setStatus("SAATHI is speaking Punjabi...");
+
+    await audio.play();
 
   } catch (error) {
+    if (thisRequest !== speechRequestNumber) return;
+
     speaking = false;
     currentAudio = null;
+
     setStatus("Punjabi voice error: " + error.message);
-    console.error(error);
+
+    console.error("Punjabi TTS error:", error);
   }
 }
 
-/* ----------------------------------
-   SPEECH OUTPUT
----------------------------------- */
+/* =========================================
+   HINDI AND ENGLISH SPEECH
+========================================= */
 
-function speak(message, startAfter = false) {
+function speak(message) {
+  if (!message) return;
 
-  // Sarvam voice for Punjabi
   if (selectedLanguage === "pa") {
     speakPunjabi(message);
     return;
   }
 
-  // Browser speech for Hindi and English
   if (!("speechSynthesis" in window)) {
     setStatus("Speech output is not supported by this browser.");
     return;
   }
 
-  window.speechSynthesis.cancel();
-
-  if (currentAudio) {
-    currentAudio.pause();
-    currentAudio = null;
-  }
-
-  speaking = true;
   stopListening();
 
   const utterance = new SpeechSynthesisUtterance(message);
@@ -723,34 +788,43 @@ function speak(message, startAfter = false) {
   utterance.rate = 0.9;
   utterance.pitch = 1;
 
+  const thisRequest = speechRequestNumber;
+
+  speaking = true;
+  setStatus("SAATHI is speaking...");
+
   utterance.onend = () => {
+    if (thisRequest !== speechRequestNumber) return;
+
     speaking = false;
+    setStatus("SAATHI has finished speaking.");
 
     if (
       automaticListening &&
       document.getElementById("homeScreen").classList.contains("active")
     ) {
       setTimeout(startListening, 700);
-    } else {
-      setStatus("SAATHI is ready.");
     }
   };
 
-  utterance.onerror = () => {
+  utterance.onerror = event => {
+    if (thisRequest !== speechRequestNumber) return;
+
     speaking = false;
-    setStatus("You can continue by using the microphone or typing.");
+    setStatus("Speech error: " + event.error);
   };
 
   window.speechSynthesis.speak(utterance);
 }
 
-/* ----------------------------------
+/* =========================================
    SPEECH RECOGNITION
----------------------------------- */
+========================================= */
 
 function createRecognition() {
   const SpeechRecognition =
-    window.SpeechRecognition || window.webkitSpeechRecognition;
+    window.SpeechRecognition ||
+    window.webkitSpeechRecognition;
 
   if (!SpeechRecognition) {
     setStatus("Voice recognition is unavailable. Please type your question.");
@@ -765,32 +839,42 @@ function createRecognition() {
 
   instance.onstart = () => {
     listening = true;
-    document.getElementById("micButton").classList.add("listening");
+
+    document.getElementById("micButton")
+      .classList.add("listening");
+
     setStatus("Listening... Speak now.");
   };
 
   instance.onresult = event => {
     const transcript = event.results[0][0].transcript;
+
     listening = false;
 
-    document.getElementById("questionInput").value = transcript;
+    document.getElementById("questionInput").value =
+      transcript;
+
     sendQuestion(transcript);
   };
 
   instance.onerror = event => {
     listening = false;
-    document.getElementById("micButton").classList.remove("listening");
+
+    document.getElementById("micButton")
+      .classList.remove("listening");
 
     if (event.error === "not-allowed") {
       setStatus("Microphone permission denied. Please type your question.");
     } else if (event.error !== "no-speech") {
-      setStatus("Voice recognition error. Please try again.");
+      setStatus("Voice recognition error: " + event.error);
     }
   };
 
   instance.onend = () => {
     listening = false;
-    document.getElementById("micButton").classList.remove("listening");
+
+    document.getElementById("micButton")
+      .classList.remove("listening");
   };
 
   return instance;
@@ -808,7 +892,7 @@ function startListening() {
   try {
     recognition.start();
   } catch (error) {
-    console.log("Recognition already active.");
+    console.log("Recognition could not start:", error);
   }
 }
 
@@ -824,19 +908,17 @@ function stopListening() {
   listening = false;
 
   const mic = document.getElementById("micButton");
-  if (mic) mic.classList.remove("listening");
+
+  if (mic) {
+    mic.classList.remove("listening");
+  }
 }
 
 function toggleListening() {
   if (speaking) {
-    window.speechSynthesis.cancel();
-
-    if (currentAudio) {
-      currentAudio.pause();
-      currentAudio = null;
-    }
-
-    speaking = false;
+    stopCurrentAudio();
+    setStatus("Speech stopped.");
+    return;
   }
 
   if (listening) {
@@ -849,9 +931,9 @@ function toggleListening() {
   }
 }
 
-/* ----------------------------------
-   GEMINI BACKEND
----------------------------------- */
+/* =========================================
+   GEMINI AI QUESTION ANSWERING
+========================================= */
 
 async function sendQuestion(question) {
   question = String(question || "").trim();
@@ -859,14 +941,7 @@ async function sendQuestion(question) {
   if (!question) return;
 
   stopListening();
-  window.speechSynthesis.cancel();
-
-  if (currentAudio) {
-    currentAudio.pause();
-    currentAudio = null;
-  }
-
-  speaking = false;
+  stopCurrentAudio();
 
   document.getElementById("answer").textContent =
     "SAATHI is thinking...";
@@ -874,7 +949,7 @@ async function sendQuestion(question) {
   setStatus("Connecting to SAATHI AI...");
 
   try {
-    let response = await fetch(REAL_API_URL, {
+    const response = await fetch(REAL_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -885,23 +960,16 @@ async function sendQuestion(question) {
       })
     });
 
-    let data = await response.json();
+    const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(data.error || "Server request failed.");
-    }
-
-    if (data.answer) {
-      displayAnswer(data.answer);
-      return;
-    }
-
-    if (data.pending && data.interactionId) {
-      data = await waitForGemini(data.interactionId);
+      throw new Error(
+        data.error || "Gemini request failed. HTTP " + response.status
+      );
     }
 
     if (!data.answer) {
-      throw new Error(data.error || "No answer received from Gemini.");
+      throw new Error("Gemini did not return an answer.");
     }
 
     displayAnswer(data.answer);
@@ -910,48 +978,18 @@ async function sendQuestion(question) {
     document.getElementById("answer").textContent =
       "Sorry, I couldn't get an answer right now.";
 
-    setStatus("Error: " + error.message);
-    automaticListening = false;
+    setStatus("AI error: " + error.message);
+
+    console.error("Gemini error:", error);
   }
-}
-
-async function waitForGemini(interactionId) {
-  setStatus("SAATHI is preparing your answer...");
-
-  for (let attempt = 0; attempt < 40; attempt++) {
-    await new Promise(resolve => setTimeout(resolve, 3000));
-
-    const response = await fetch(REAL_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        action: "check",
-        interactionId: interactionId
-      })
-    });
-
-    const data = await response.json();
-
-    if (data.answer) return data;
-
-    if (data.pending) {
-      setStatus("Still thinking... Please wait.");
-      continue;
-    }
-
-    if (data.error) {
-      throw new Error(data.error);
-    }
-  }
-
-  throw new Error("Gemini is taking too long. Please try again.");
 }
 
 function displayAnswer(answer) {
   document.getElementById("answer").textContent = answer;
-  setStatus("SAATHI has answered.");
+
+  setStatus("SAATHI has answered. Preparing voice...");
+
+  // Send the answer to the correct voice provider.
   speak(answer);
 }
 
@@ -962,44 +1000,55 @@ function sendTypedQuestion() {
   if (!question) return;
 
   input.value = "";
+
   sendQuestion(question);
 }
 
-/* ----------------------------------
+/* =========================================
    PLUS MENU
----------------------------------- */
+========================================= */
 
 function openTools() {
-  document.getElementById("toolsModal").classList.add("show");
+  document.getElementById("toolsModal")
+    .classList.add("show");
 }
 
 function closeTools() {
-  document.getElementById("toolsModal").classList.remove("show");
+  document.getElementById("toolsModal")
+    .classList.remove("show");
 }
 
 function closeModal(id) {
-  document.getElementById(id).classList.remove("show");
+  document.getElementById(id)
+    .classList.remove("show");
 }
 
 function showFamily() {
   closeTools();
   renderContacts();
-  document.getElementById("familyModal").classList.add("show");
+
+  document.getElementById("familyModal")
+    .classList.add("show");
 }
 
 function showMedicine() {
   closeTools();
   renderMedicines();
-  document.getElementById("medicineModal").classList.add("show");
+
+  document.getElementById("medicineModal")
+    .classList.add("show");
 }
 
-/* ----------------------------------
+/* =========================================
    FAMILY CONTACTS
----------------------------------- */
+========================================= */
 
 function addContact() {
-  const name = document.getElementById("contactName").value.trim();
-  const phone = document.getElementById("contactPhone").value.trim();
+  const name = document.getElementById("contactName")
+    .value.trim();
+
+  const phone = document.getElementById("contactPhone")
+    .value.trim();
 
   if (!name || !phone) {
     alert("Please enter both name and phone number.");
@@ -1008,7 +1057,10 @@ function addContact() {
 
   contacts.push({ name, phone });
 
-  localStorage.setItem("saathiContacts", JSON.stringify(contacts));
+  localStorage.setItem(
+    "saathiContacts",
+    JSON.stringify(contacts)
+  );
 
   document.getElementById("contactName").value = "";
   document.getElementById("contactPhone").value = "";
@@ -1018,6 +1070,7 @@ function addContact() {
 
 function renderContacts() {
   const list = document.getElementById("contactList");
+
   if (!list) return;
 
   list.innerHTML = "";
@@ -1048,7 +1101,12 @@ function renderContacts() {
 
     remove.onclick = () => {
       contacts.splice(index, 1);
-      localStorage.setItem("saathiContacts", JSON.stringify(contacts));
+
+      localStorage.setItem(
+        "saathiContacts",
+        JSON.stringify(contacts)
+      );
+
       renderContacts();
     };
 
@@ -1057,12 +1115,14 @@ function renderContacts() {
   });
 }
 
-/* ----------------------------------
+/* =========================================
    MEDICINE REMINDERS
----------------------------------- */
+========================================= */
 
 function addMedicine() {
-  const name = document.getElementById("medicineName").value.trim();
+  const name = document.getElementById("medicineName")
+    .value.trim();
+
   const time = document.getElementById("medicineTime").value;
 
   if (!name || !time) {
@@ -1076,7 +1136,10 @@ function addMedicine() {
     lastReminderDate: ""
   });
 
-  localStorage.setItem("saathiMedicines", JSON.stringify(medicines));
+  localStorage.setItem(
+    "saathiMedicines",
+    JSON.stringify(medicines)
+  );
 
   document.getElementById("medicineName").value = "";
   document.getElementById("medicineTime").value = "";
@@ -1086,6 +1149,7 @@ function addMedicine() {
 
 function renderMedicines() {
   const list = document.getElementById("medicineList");
+
   if (!list) return;
 
   list.innerHTML = "";
@@ -1106,7 +1170,12 @@ function renderMedicines() {
 
     remove.onclick = () => {
       medicines.splice(index, 1);
-      localStorage.setItem("saathiMedicines", JSON.stringify(medicines));
+
+      localStorage.setItem(
+        "saathiMedicines",
+        JSON.stringify(medicines)
+      );
+
       renderMedicines();
     };
 
@@ -1116,12 +1185,13 @@ function renderMedicines() {
 }
 
 function startMedicineChecker() {
+  if (medicineTimerStarted) return;
+
+  medicineTimerStarted = true;
+
   checkMedicineReminders();
 
-  if (!window.medicineCheckerStarted) {
-    window.medicineCheckerStarted = true;
-    setInterval(checkMedicineReminders, 30000);
-  }
+  setInterval(checkMedicineReminders, 30000);
 }
 
 function checkMedicineReminders() {
@@ -1159,14 +1229,20 @@ function checkMedicineReminders() {
         });
       }
 
-      speak("It is time for your medicine: " + medicine.name);
+      speak(
+        selectedLanguage === "pa"
+          ? "ਤੁਹਾਡੀ ਦਵਾਈ ਲੈਣ ਦਾ ਸਮਾਂ ਹੋ ਗਿਆ ਹੈ। " + medicine.name
+          : selectedLanguage === "hi"
+            ? "आपकी दवाई लेने का समय हो गया है। " + medicine.name
+            : "It is time for your medicine: " + medicine.name
+      );
     }
   });
 }
 
-/* ----------------------------------
+/* =========================================
    EMERGENCY SOS
----------------------------------- */
+========================================= */
 
 function emergencySOS() {
   closeTools();
@@ -1180,21 +1256,13 @@ function emergencySOS() {
   }
 }
 
-/* ----------------------------------
-   INITIALIZATION
----------------------------------- */
+/* =========================================
+   CLEANUP
+========================================= */
 
 window.addEventListener("beforeunload", () => {
   stopListening();
-
-  if ("speechSynthesis" in window) {
-    window.speechSynthesis.cancel();
-  }
-
-  if (currentAudio) {
-    currentAudio.pause();
-    currentAudio = null;
-  }
+  stopCurrentAudio();
 });
 
 </script>
