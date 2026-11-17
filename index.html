@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -70,6 +71,7 @@ button, input, select {
 button {
   cursor: pointer;
   border: none;
+  touch-action: manipulation;
 }
 
 .primary {
@@ -152,6 +154,7 @@ button {
   min-height: 25px;
   font-size: 14px;
   margin: 10px;
+  overflow-wrap: anywhere;
 }
 
 .mic-button {
@@ -183,6 +186,24 @@ button {
   min-height: 50px;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.hear-button {
+  display: block;
+  width: 100%;
+  min-height: 58px;
+  background: #2875d0;
+  color: white;
+  border-radius: 13px;
+  font-size: 17px;
+  font-weight: bold;
+  margin-top: 12px;
+  padding: 13px;
+}
+
+.hear-button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
 }
 
 .plus-button {
@@ -331,7 +352,7 @@ footer {
   <button class="primary" onclick="goToIntroduction()">Continue</button>
 </section>
 
-<!-- INTRODUCTION / PERMISSIONS -->
+<!-- INTRODUCTION SCREEN -->
 <section id="introScreen" class="screen">
   <h2>Welcome to SAATHI AI</h2>
 
@@ -377,6 +398,11 @@ footer {
       Your answers will appear here.
     </div>
 
+    <button id="hearButton" class="hear-button"
+      onclick="playAnswer()" disabled>
+      🔊 TAP TO HEAR SAATHI
+    </button>
+
     <input
       id="questionInput"
       class="text-input"
@@ -398,6 +424,9 @@ footer {
 <footer>
   SAATHI AI · Your Voice. Your Companion.
 </footer>
+
+<!-- AUDIO PLAYER -->
+<audio id="saathiAudio" playsinline preload="auto"></audio>
 
 <!-- TOOLS MODAL -->
 <div id="toolsModal" class="modal">
@@ -458,7 +487,7 @@ footer {
 <script>
 
 /* =========================================
-   SAATHI AI CONFIGURATION
+   CONFIGURATION
 ========================================= */
 
 const REAL_API_URL =
@@ -472,17 +501,25 @@ let listening = false;
 let speaking = false;
 let automaticListening = true;
 
-let currentAudio = null;
 let medicineTimerStarted = false;
 let speechRequestNumber = 0;
 
-let contacts = JSON.parse(
-  localStorage.getItem("saathiContacts") || "[]"
-);
+let lastSpokenText = "";
+let preparedPunjabiAudio = false;
 
-let medicines = JSON.parse(
-  localStorage.getItem("saathiMedicines") || "[]"
-);
+const audioPlayer = document.getElementById("saathiAudio");
+
+let contacts = loadSavedData("saathiContacts");
+let medicines = loadSavedData("saathiMedicines");
+
+function loadSavedData(key) {
+  try {
+    const data = JSON.parse(localStorage.getItem(key) || "[]");
+    return Array.isArray(data) ? data : [];
+  } catch (error) {
+    return [];
+  }
+}
 
 const languageLocale = {
   en: "en-IN",
@@ -576,6 +613,23 @@ function goToIntroduction() {
 ========================================= */
 
 async function requestPermissions() {
+  // Attempt a silent audio unlock during the user's button tap.
+  try {
+    audioPlayer.src =
+      "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
+
+    const unlockPromise = audioPlayer.play();
+
+    if (unlockPromise) {
+      await unlockPromise;
+    }
+
+    audioPlayer.pause();
+    audioPlayer.currentTime = 0;
+  } catch (error) {
+    console.log("Audio unlock unavailable:", error);
+  }
+
   try {
     if (navigator.mediaDevices?.getUserMedia) {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -615,7 +669,6 @@ function enterHome() {
 
   automaticListening = true;
 
-  // Speak the welcome greeting.
   speak(greetings[selectedLanguage]);
 }
 
@@ -623,8 +676,14 @@ function setStatus(message) {
   document.getElementById("status").textContent = message;
 }
 
+function setHearButton(enabled, label) {
+  const button = document.getElementById("hearButton");
+  button.disabled = !enabled;
+  button.textContent = label || "🔊 TAP TO HEAR SAATHI";
+}
+
 /* =========================================
-   STOP CURRENT AUDIO
+   STOP AUDIO AND SPEECH
 ========================================= */
 
 function stopCurrentAudio() {
@@ -634,45 +693,38 @@ function stopCurrentAudio() {
     window.speechSynthesis.cancel();
   }
 
-  if (currentAudio) {
-    currentAudio.onended = null;
-    currentAudio.onerror = null;
-    currentAudio.pause();
-
-    try {
-      currentAudio.currentTime = 0;
-    } catch (error) {
-      console.log(error);
-    }
-
-    currentAudio = null;
-  }
+  audioPlayer.pause();
+  audioPlayer.onended = null;
+  audioPlayer.onerror = null;
 
   speaking = false;
 }
 
 /* =========================================
-   SARVAM PUNJABI TEXT-TO-SPEECH
+   PUNJABI SARVAM AUDIO PREPARATION
 ========================================= */
 
-async function speakPunjabi(message) {
+async function preparePunjabiAudio(message) {
   const thisRequest = ++speechRequestNumber;
 
+  stopListening();
+
+  if ("speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+  }
+
+  audioPlayer.pause();
+  audioPlayer.onended = null;
+  audioPlayer.onerror = null;
+
+  speaking = true;
+  preparedPunjabiAudio = false;
+
+  setHearButton(false, "Preparing Punjabi voice...");
+
+  setStatus("SAATHI is preparing Punjabi voice...");
+
   try {
-    stopListening();
-
-    if ("speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-    }
-
-    if (currentAudio) {
-      currentAudio.pause();
-      currentAudio = null;
-    }
-
-    speaking = true;
-    setStatus("SAATHI is preparing Punjabi voice...");
-
     const response = await fetch(REAL_API_URL, {
       method: "POST",
       headers: {
@@ -685,77 +737,94 @@ async function speakPunjabi(message) {
       })
     });
 
-    let data;
-
-    try {
-      data = await response.json();
-    } catch (error) {
-      throw new Error("Cloudflare returned an invalid response.");
-    }
+    const data = await response.json();
 
     if (!response.ok) {
-      throw new Error(
-        data.error || "Sarvam request failed. HTTP " + response.status
-      );
+      throw new Error(data.error || "Sarvam request failed.");
     }
 
     if (!data.audio) {
-      throw new Error("Sarvam did not return audio data.");
+      throw new Error("No Punjabi audio was returned.");
     }
 
-    // Ignore an old request if a newer question has started.
-    if (thisRequest !== speechRequestNumber) {
-      return;
-    }
+    if (thisRequest !== speechRequestNumber) return;
 
     const mimeType = data.audioMimeType || "audio/mpeg";
 
-    const audio = new Audio(
-      "data:" + mimeType + ";base64," + data.audio
-    );
+    // Convert base64 audio into a Blob URL.
+    const binary = atob(data.audio);
+    const bytes = new Uint8Array(binary.length);
 
-    audio.preload = "auto";
-    currentAudio = audio;
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
 
-    audio.onended = () => {
+    const audioBlob = new Blob([bytes], {
+      type: mimeType
+    });
+
+    if (audioPlayer.dataset.objectUrl) {
+      URL.revokeObjectURL(audioPlayer.dataset.objectUrl);
+    }
+
+    const objectUrl = URL.createObjectURL(audioBlob);
+    audioPlayer.dataset.objectUrl = objectUrl;
+    audioPlayer.src = objectUrl;
+    audioPlayer.load();
+
+    preparedPunjabiAudio = true;
+    speaking = false;
+
+    setHearButton(true, "🔊 TAP TO HEAR SAATHI");
+
+    setStatus("Punjabi voice is ready. Tap to hear if it hasn't played.");
+
+    // Try automatic playback. Mobile browsers may block this.
+    try {
+      await audioPlayer.play();
+
       if (thisRequest !== speechRequestNumber) return;
 
-      currentAudio = null;
+      speaking = true;
+      setStatus("SAATHI is speaking Punjabi...");
+
+      audioPlayer.onended = () => {
+        if (thisRequest !== speechRequestNumber) return;
+
+        speaking = false;
+        setStatus("SAATHI has finished speaking.");
+
+        if (automaticListening) {
+          setTimeout(() => {
+            if (!speaking && automaticListening) {
+              startListening();
+            }
+          }, 700);
+        }
+      };
+
+      audioPlayer.onerror = () => {
+        if (thisRequest !== speechRequestNumber) return;
+
+        speaking = false;
+        setStatus("Audio playback failed. Tap the blue button to try again.");
+      };
+
+    } catch (playError) {
       speaking = false;
 
-      setStatus("SAATHI has finished speaking.");
+      setStatus("Voice is ready. Tap the blue button to hear SAATHI.");
 
-      if (
-        automaticListening &&
-        document.getElementById("homeScreen").classList.contains("active")
-      ) {
-        setTimeout(() => {
-          if (!speaking && automaticListening) {
-            startListening();
-          }
-        }, 700);
-      }
-    };
-
-    audio.onerror = () => {
-      if (thisRequest !== speechRequestNumber) return;
-
-      currentAudio = null;
-      speaking = false;
-
-      setStatus("Punjabi audio playback failed. Please try again.");
-      console.error("Audio playback error", audio.error);
-    };
-
-    setStatus("SAATHI is speaking Punjabi...");
-
-    await audio.play();
+      console.log("Automatic mobile playback was blocked:", playError);
+    }
 
   } catch (error) {
     if (thisRequest !== speechRequestNumber) return;
 
     speaking = false;
-    currentAudio = null;
+    preparedPunjabiAudio = false;
+
+    setHearButton(false, "Punjabi voice unavailable");
 
     setStatus("Punjabi voice error: " + error.message);
 
@@ -767,20 +836,17 @@ async function speakPunjabi(message) {
    HINDI AND ENGLISH SPEECH
 ========================================= */
 
-function speak(message) {
-  if (!message) return;
-
-  if (selectedLanguage === "pa") {
-    speakPunjabi(message);
-    return;
-  }
-
+function speakNative(message) {
   if (!("speechSynthesis" in window)) {
-    setStatus("Speech output is not supported by this browser.");
+    speaking = false;
+    setStatus("Speech output is not supported. Please try another browser.");
+    setHearButton(true);
     return;
   }
 
   stopListening();
+
+  window.speechSynthesis.cancel();
 
   const utterance = new SpeechSynthesisUtterance(message);
 
@@ -791,7 +857,14 @@ function speak(message) {
   const thisRequest = speechRequestNumber;
 
   speaking = true;
+
   setStatus("SAATHI is speaking...");
+
+  utterance.onstart = () => {
+    if (thisRequest !== speechRequestNumber) return;
+    speaking = true;
+    setStatus("SAATHI is speaking...");
+  };
 
   utterance.onend = () => {
     if (thisRequest !== speechRequestNumber) return;
@@ -799,11 +872,12 @@ function speak(message) {
     speaking = false;
     setStatus("SAATHI has finished speaking.");
 
-    if (
-      automaticListening &&
-      document.getElementById("homeScreen").classList.contains("active")
-    ) {
-      setTimeout(startListening, 700);
+    if (automaticListening) {
+      setTimeout(() => {
+        if (!speaking && automaticListening) {
+          startListening();
+        }
+      }, 700);
     }
   };
 
@@ -811,10 +885,92 @@ function speak(message) {
     if (thisRequest !== speechRequestNumber) return;
 
     speaking = false;
-    setStatus("Speech error: " + event.error);
+
+    setStatus("Speech error: " + event.error +
+      ". Tap the blue button to try again.");
+
+    console.error("Speech synthesis error:", event);
   };
 
   window.speechSynthesis.speak(utterance);
+}
+
+function speak(message) {
+  if (!message) return;
+
+  lastSpokenText = message;
+
+  if (selectedLanguage === "pa") {
+    preparePunjabiAudio(message);
+  } else {
+    preparedPunjabiAudio = false;
+    setHearButton(true);
+    speakNative(message);
+  }
+}
+
+/* =========================================
+   MANUAL PLAYBACK BUTTON
+========================================= */
+
+function playAnswer() {
+  if (!lastSpokenText) {
+    setStatus("There is no answer to play yet.");
+    return;
+  }
+
+  automaticListening = false;
+  stopListening();
+
+  // Punjabi: the audio has already been downloaded.
+  // Play directly from the button tap.
+  if (selectedLanguage === "pa") {
+    if (!preparedPunjabiAudio || !audioPlayer.src) {
+      setStatus("Punjabi audio is still being prepared. Please wait.");
+      return;
+    }
+
+    stopCurrentAudio();
+
+    // stopCurrentAudio increments the request number;
+    // preserve the prepared audio and start it directly.
+    const thisRequest = speechRequestNumber;
+
+    audioPlayer.onended = () => {
+      if (thisRequest !== speechRequestNumber) return;
+
+      speaking = false;
+      setStatus("SAATHI has finished speaking.");
+    };
+
+    audioPlayer.onerror = () => {
+      if (thisRequest !== speechRequestNumber) return;
+
+      speaking = false;
+      setStatus("Could not play the Punjabi audio. Please try again.");
+    };
+
+    speaking = true;
+    setStatus("SAATHI is speaking Punjabi...");
+
+    const playPromise = audioPlayer.play();
+
+    if (playPromise) {
+      playPromise.catch(error => {
+        if (thisRequest !== speechRequestNumber) return;
+
+        speaking = false;
+        setStatus("Playback error: " + error.message);
+        console.error(error);
+      });
+    }
+
+    return;
+  }
+
+  // Hindi and English: speak directly from this tap.
+  stopCurrentAudio();
+  speakNative(lastSpokenText);
 }
 
 /* =========================================
@@ -827,7 +983,7 @@ function createRecognition() {
     window.webkitSpeechRecognition;
 
   if (!SpeechRecognition) {
-    setStatus("Voice recognition is unavailable. Please type your question.");
+    setStatus("Voice recognition is unavailable in this browser. Please type your question.");
     return null;
   }
 
@@ -865,7 +1021,9 @@ function createRecognition() {
 
     if (event.error === "not-allowed") {
       setStatus("Microphone permission denied. Please type your question.");
-    } else if (event.error !== "no-speech") {
+    } else if (event.error === "no-speech") {
+      setStatus("No speech detected. Tap the microphone to try again.");
+    } else {
       setStatus("Voice recognition error: " + event.error);
     }
   };
@@ -940,8 +1098,15 @@ async function sendQuestion(question) {
 
   if (!question) return;
 
+  automaticListening = true;
+
   stopListening();
   stopCurrentAudio();
+
+  preparedPunjabiAudio = false;
+  lastSpokenText = "";
+
+  setHearButton(false, "Preparing answer...");
 
   document.getElementById("answer").textContent =
     "SAATHI is thinking...";
@@ -978,6 +1143,8 @@ async function sendQuestion(question) {
     document.getElementById("answer").textContent =
       "Sorry, I couldn't get an answer right now.";
 
+    setHearButton(false, "No answer available");
+
     setStatus("AI error: " + error.message);
 
     console.error("Gemini error:", error);
@@ -987,9 +1154,10 @@ async function sendQuestion(question) {
 function displayAnswer(answer) {
   document.getElementById("answer").textContent = answer;
 
+  lastSpokenText = answer;
+
   setStatus("SAATHI has answered. Preparing voice...");
 
-  // Send the answer to the correct voice provider.
   speak(answer);
 }
 
@@ -1229,13 +1397,14 @@ function checkMedicineReminders() {
         });
       }
 
-      speak(
+      const reminderText =
         selectedLanguage === "pa"
           ? "ਤੁਹਾਡੀ ਦਵਾਈ ਲੈਣ ਦਾ ਸਮਾਂ ਹੋ ਗਿਆ ਹੈ। " + medicine.name
           : selectedLanguage === "hi"
             ? "आपकी दवाई लेने का समय हो गया है। " + medicine.name
-            : "It is time for your medicine: " + medicine.name
-      );
+            : "It is time for your medicine: " + medicine.name;
+
+      speak(reminderText);
     }
   });
 }
@@ -1263,6 +1432,10 @@ function emergencySOS() {
 window.addEventListener("beforeunload", () => {
   stopListening();
   stopCurrentAudio();
+
+  if (audioPlayer.dataset.objectUrl) {
+    URL.revokeObjectURL(audioPlayer.dataset.objectUrl);
+  }
 });
 
 </script>
